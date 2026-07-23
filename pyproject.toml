@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adjust-pdf"
+version = "0.5.0"
+description = "将 PDF 页面旋转属性固化到页面内容中的 Windows 小工具"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    { name = "AdjustPdf Contributors" },
+]
+dependencies = [
+    "pypdf>=6,<7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<10",
+    "pyinstaller>=6,<7",
+    "pymupdf>=1.24,<2",
+]
+
+[project.scripts]
+adjust-pdf-cli = "adjust_pdf.cli:main"
+
+[project.gui-scripts]
+adjust-pdf = "adjust_pdf.app:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+pythonpath = ["src"]
+
