@@ -18,7 +18,7 @@ PypdfEngine
 
 ### GUI 和 CLI
 
-只负责接收用户输入、调用服务和显示结果，不直接操作 PDF。
+GUI 使用 PySide6，CLI 使用 argparse。两者只负责接收用户输入、调用服务和显示结果，不直接操作 PDF。GUI 的背景、半透明卡片和 Qt 工作线程事件轮询均属于表现层。
 
 ### PdfProcessingService
 

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet('OneFile', 'OneDir')]
     [string]$Mode = 'OneFile',
 

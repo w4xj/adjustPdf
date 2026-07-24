@@ -16,7 +16,7 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
 
-运行依赖只有 pypdf。pytest、PyInstaller 和 PyMuPDF 是开发依赖；PyMuPDF 只用于视觉一致性测试，不会打包进正式程序。
+运行依赖包括 pypdf 和 PySide6。pytest、PyInstaller 和 PyMuPDF 是开发依赖；PyMuPDF 只用于 PDF 视觉一致性测试，不会因为测试用途额外打包进正式程序。
 
 ## 4. 运行程序
 
@@ -69,7 +69,7 @@ $env:PYTHONPATH = "$PWD\src"
 
 GUI 中的“检查页面旋转”调用 `PdfProcessingService.inspect()`，不会写入输出文件。检查结果使用 `rotation_report.py` 格式化，再由主线程显示到可滚动窗口。
 
-后台检查通过队列把事件传回 Tkinter 主线程，避免大型 PDF 读取时冻结窗口。报告和文件列表使用同一个 `DocumentInfo` 数据模型。
+后台检查通过队列和 QTimer 把事件传回 Qt 主线程，避免大型 PDF 读取时冻结窗口。报告和文件列表使用同一个 `DocumentInfo` 数据模型。
 
 新增相关模块：
 
@@ -133,19 +133,21 @@ powershell -ExecutionPolicy Bypass -File .\scripts\clean.ps1
 - 不在 GUI 模块中写 PDF 业务逻辑；
 - 新功能必须补充测试和文档。
 
-## 14. LTY 背景皮肤
+## 14. PySide6 与 LTY 背景皮肤
 
-皮肤源图为 `assets/lty.jpg`，构建资源为 `resources/skins/lty.png`。Tkinter 通过全窗口 Canvas 显示背景，内容面板使用深色 ttk 样式覆盖在背景上。
+GUI 使用 PySide6。`BackgroundWidget` 在 `paintEvent()` 中按比例铺满并居中裁剪 `resources/skins/lty.png`；主布局使用四张半透明 `QFrame` 卡片承载标题、文件列表、处理选项和执行状态。
 
-相关文件：
+关键实现：
 
 ```text
-assets/lty.jpg
-resources/skins/lty.png
-scripts/create_skin_assets.ps1
-src/adjust_pdf/gui/main_window.py
+BackgroundWidget.paintEvent()    背景缩放、居中裁剪和轻度渐变
+MainWindow._build_widgets()      四张卡片和全部控件
+MainWindow._apply_style()        RGBA 半透明、红色警示、表格与按钮样式
+QTimer + queue.Queue             将工作线程事件安全地转回 GUI 主线程
 ```
 
-构建脚本会把 `resources/skins/lty.png` 放入 PyInstaller 的 `resources/skins` 目录。GUI 通过 `resource_path()` 同时兼容源码和 one-file EXE。
+开发环境安装 `requirements.txt` 时会安装 PySide6。构建脚本会打包 `resources/skins/lty.png` 和应用图标，PyInstaller 自动分析 Qt 依赖。
 
-皮肤代码不能直接调用 PDF 引擎，PDF 处理功能应继续通过 `PdfProcessingService` 使用。
+截图验收可以使用 `QT_QPA_PLATFORM=offscreen` 创建真实 Qt 窗口，再用 `QWidget.grab()` 保存 PNG；这能在不依赖人工截屏的情况下检查背景、控件尺寸和默认状态。
+
+皮肤代码不能直接调用 PDF 引擎，所有检查和处理仍通过 `PdfProcessingService`。完整说明见 [SKIN.md](SKIN.md)。
