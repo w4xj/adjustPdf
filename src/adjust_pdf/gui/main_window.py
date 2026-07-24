@@ -188,24 +188,28 @@ class MainWindow(QMainWindow):
         self.file_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.file_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.file_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.file_table.setAlternatingRowColors(True)
+        self.file_table.setAlternatingRowColors(False)
         self.file_table.verticalHeader().setVisible(False)
-        self.file_table.setShowGrid(False)
+        self.file_table.setShowGrid(True)
         self.file_table.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.file_table.viewport().setAutoFillBackground(False)
         self.file_table.viewport().setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         table_palette = self.file_table.palette()
-        table_palette.setColor(QPalette.ColorRole.Base, QColor(8, 20, 34, 22))
-        table_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(18, 36, 56, 32))
-        table_palette.setColor(QPalette.ColorRole.Text, QColor("#fffdf8"))
+        table_palette.setColor(QPalette.ColorRole.Base, QColor(0, 0, 0, 0))
+        table_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(0, 0, 0, 0))
+        table_palette.setColor(QPalette.ColorRole.Text, QColor("#ffe7b0"))
         table_palette.setColor(QPalette.ColorRole.Highlight, QColor(209, 132, 61, 150))
-        table_palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
+        table_palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#fff8e8"))
         self.file_table.setPalette(table_palette)
         header = self.file_table.horizontalHeader()
+        header.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        header.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         header.resizeSection(1, 150)
+        header.setHighlightSections(False)
+        header.setSectionsClickable(False)
         file_layout.addWidget(self.file_table, 1)
 
         button_row = QHBoxLayout()
@@ -434,31 +438,42 @@ class MainWindow(QMainWindow):
                 border: 1px solid rgba(255, 214, 150, 170);
             }
             QTableWidget {
-                color: #fffdf8;
-                background-color: rgba(8, 20, 34, 22);
-                alternate-background-color: rgba(18, 36, 56, 32);
-                border: 1px solid rgba(255, 214, 150, 175);
+                color: #ffe7b0;
+                background-color: transparent;
+                alternate-background-color: transparent;
+                border: 1px solid rgba(255, 214, 150, 200);
                 border-radius: 7px;
-                gridline-color: rgba(255, 214, 150, 70);
-                selection-background-color: rgba(209, 132, 61, 150);
-                selection-color: #ffffff;
+                gridline-color: rgba(255, 214, 150, 165);
+                selection-background-color: rgba(209, 132, 61, 120);
+                selection-color: #fff8e8;
+                outline: none;
             }
             QTableWidget::item {
-                color: #fffdf8;
+                color: #ffe7b0;
                 background: transparent;
-                padding: 4px;
+                border: none;
+                padding: 5px 6px;
             }
             QTableWidget::item:selected {
-                color: #ffffff;
-                background: rgba(209, 132, 61, 150);
+                color: #fff8e8;
+                background: rgba(209, 132, 61, 120);
+            }
+            QHeaderView {
+                background: transparent;
+                border: none;
             }
             QHeaderView::section {
-                color: #fff8ec;
-                background-color: rgba(232, 166, 77, 85);
+                color: #ffd27a;
+                background-color: transparent;
                 border: none;
-                border-right: 1px solid rgba(255, 220, 170, 120);
-                padding: 8px;
+                border-bottom: 1px solid rgba(255, 214, 150, 210);
+                border-right: 1px solid rgba(255, 214, 150, 150);
+                padding: 8px 6px;
                 font-weight: 700;
+                font-size: 13px;
+            }
+            QHeaderView::section:last {
+                border-right: none;
             }
             QProgressBar {
                 background-color: rgba(24, 49, 72, 80);
@@ -853,5 +868,7 @@ def launch_gui(initial_files: list[Path] | None = None, log_path: Path | None = 
     window = MainWindow(initial_files=initial_files, log_path=log_path)
     window.show()
     app.exec()
+
+
 
 
