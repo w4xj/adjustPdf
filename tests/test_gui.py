@@ -27,12 +27,10 @@ def test_pyside_skin_loads_and_defaults_to_first_page() -> None:
     assert window.risk_banner.objectName() == "riskBanner"
     assert "rgba(8, 18, 32, 28)" in window.styleSheet()
     assert "rgba(234, 176, 94, 70)" in window.styleSheet()
+    assert "rgba(234, 176, 94, 185)" in window.styleSheet()
     assert "QHeaderView::section" in window.styleSheet()
-    assert "background-color: transparent" in window.styleSheet()
-    assert "gridline-color: rgba(255, 214, 150, 165)" in window.styleSheet()
+    assert "color: #ffffff" in window.styleSheet()
     assert window.file_table.showGrid()
-    assert "#ffd27a" in window.styleSheet()
-    assert "#ffe7b0" in window.styleSheet()
     assert window.findChild(object, "headerCard") is not None
     assert window.findChild(object, "fileCard") is not None
     assert window.findChild(object, "optionsCard") is not None

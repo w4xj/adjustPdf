@@ -197,7 +197,7 @@ class MainWindow(QMainWindow):
         table_palette = self.file_table.palette()
         table_palette.setColor(QPalette.ColorRole.Base, QColor(0, 0, 0, 0))
         table_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(0, 0, 0, 0))
-        table_palette.setColor(QPalette.ColorRole.Text, QColor("#ffe7b0"))
+        table_palette.setColor(QPalette.ColorRole.Text, QColor("#ffffff"))
         table_palette.setColor(QPalette.ColorRole.Highlight, QColor(209, 132, 61, 150))
         table_palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#fff8e8"))
         self.file_table.setPalette(table_palette)
@@ -438,7 +438,7 @@ class MainWindow(QMainWindow):
                 border: 1px solid rgba(255, 214, 150, 170);
             }
             QTableWidget {
-                color: #ffe7b0;
+                color: #ffffff;
                 background-color: transparent;
                 alternate-background-color: transparent;
                 border: 1px solid rgba(255, 214, 150, 200);
@@ -449,7 +449,7 @@ class MainWindow(QMainWindow):
                 outline: none;
             }
             QTableWidget::item {
-                color: #ffe7b0;
+                color: #ffffff;
                 background: transparent;
                 border: none;
                 padding: 5px 6px;
@@ -463,11 +463,11 @@ class MainWindow(QMainWindow):
                 border: none;
             }
             QHeaderView::section {
-                color: #ffd27a;
-                background-color: transparent;
+                color: #ffffff;
+                background-color: rgba(234, 176, 94, 185);
                 border: none;
-                border-bottom: 1px solid rgba(255, 214, 150, 210);
-                border-right: 1px solid rgba(255, 214, 150, 150);
+                border-right: 1px solid rgba(255, 225, 170, 170);
+                border-bottom: 1px solid rgba(255, 214, 150, 180);
                 padding: 8px 6px;
                 font-weight: 700;
                 font-size: 13px;
@@ -868,6 +868,9 @@ def launch_gui(initial_files: list[Path] | None = None, log_path: Path | None = 
     window = MainWindow(initial_files=initial_files, log_path=log_path)
     window.show()
     app.exec()
+
+
+
 
 
 
