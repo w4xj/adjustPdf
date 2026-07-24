@@ -1,4 +1,4 @@
-"""PySide6 图形界面。"""
+﻿"""PySide6 图形界面。"""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import uuid
 from pathlib import Path
 
 from PySide6.QtCore import QSize, Qt, QTimer
-from PySide6.QtGui import QColor, QCloseEvent, QDragEnterEvent, QDropEvent, QIcon, QLinearGradient, QPainter, QPixmap
+from PySide6.QtGui import QColor, QCloseEvent, QDragEnterEvent, QDropEvent, QIcon, QLinearGradient, QPainter, QPalette, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -79,10 +79,11 @@ class BackgroundWidget(QWidget):
         else:
             painter.fillRect(self.rect(), QColor("#0B1728"))
 
-        shade = QLinearGradient(0, 0, self.width(), self.height())
-        shade.setColorAt(0.0, QColor(4, 12, 24, 38))
-        shade.setColorAt(0.55, QColor(5, 14, 28, 20))
-        shade.setColorAt(1.0, QColor(4, 12, 24, 56))
+        # 仅做极轻遮罩，避免文字发飘，同时尽量保留原图细节。
+        shade = QLinearGradient(0, 0, 0, self.height())
+        shade.setColorAt(0.0, QColor(0, 0, 0, 10))
+        shade.setColorAt(0.5, QColor(0, 0, 0, 0))
+        shade.setColorAt(1.0, QColor(0, 0, 0, 18))
         painter.fillRect(self.rect(), shade)
         painter.end()
 
@@ -190,6 +191,16 @@ class MainWindow(QMainWindow):
         self.file_table.setAlternatingRowColors(True)
         self.file_table.verticalHeader().setVisible(False)
         self.file_table.setShowGrid(False)
+        self.file_table.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.file_table.viewport().setAutoFillBackground(False)
+        self.file_table.viewport().setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        table_palette = self.file_table.palette()
+        table_palette.setColor(QPalette.ColorRole.Base, QColor(8, 20, 34, 22))
+        table_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(18, 36, 56, 32))
+        table_palette.setColor(QPalette.ColorRole.Text, QColor("#fffdf8"))
+        table_palette.setColor(QPalette.ColorRole.Highlight, QColor(209, 132, 61, 150))
+        table_palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
+        self.file_table.setPalette(table_palette)
         header = self.file_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
@@ -305,66 +316,173 @@ class MainWindow(QMainWindow):
         card.setObjectName(object_name)
         card.setProperty("card", True)
         card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        card.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         shadow = QGraphicsDropShadowEffect(card)
-        shadow.setBlurRadius(28)
-        shadow.setOffset(0, 7)
-        shadow.setColor(QColor(0, 0, 0, 115))
+        shadow.setBlurRadius(18)
+        shadow.setOffset(0, 3)
+        shadow.setColor(QColor(0, 0, 0, 55))
         card.setGraphicsEffect(shadow)
         return card
 
     def _apply_style(self) -> None:
+        """高透明玻璃风格：优先透出原图，仅保留必要边框和文字对比度。"""
         self.setStyleSheet("""
             QMainWindow, QWidget#backgroundWidget { background-color: #0b1728; }
             QFrame[card="true"] {
-                background-color: rgba(9, 22, 39, 166);
-                border: 1px solid rgba(233, 164, 75, 185);
+                background-color: rgba(8, 18, 32, 28);
+                border: 1px solid rgba(255, 214, 150, 170);
                 border-radius: 14px;
             }
-            QLabel { color: #f8f4e9; font-family: "Microsoft YaHei UI"; font-size: 13px; background: transparent; }
-            QLabel#titleLabel { color: #ffffff; font-size: 23px; font-weight: 700; }
-            QLabel#subtitleLabel, QLabel#mutedLabel { color: #cbd5e3; font-size: 12px; }
-            QLabel#sectionTitle { color: #f1b45d; font-size: 15px; font-weight: 700; }
+            QLabel {
+                color: #fffdf7;
+                font-family: "Microsoft YaHei UI";
+                font-size: 13px;
+                background: transparent;
+            }
+            QLabel#titleLabel {
+                color: #ffffff;
+                font-size: 23px;
+                font-weight: 700;
+            }
+            QLabel#subtitleLabel, QLabel#mutedLabel {
+                color: #f2f6ff;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            QLabel#sectionTitle {
+                color: #ffd78b;
+                font-size: 15px;
+                font-weight: 700;
+            }
             QLabel#skinBadge {
-                color: #122239; background-color: rgba(242, 177, 83, 225);
-                border-radius: 11px; padding: 5px 11px; font-weight: 700; font-size: 12px;
+                color: #fff8ec;
+                background-color: rgba(20, 42, 68, 95);
+                border: 1px solid rgba(255, 210, 140, 180);
+                border-radius: 11px;
+                padding: 5px 11px;
+                font-weight: 700;
+                font-size: 12px;
             }
             QLabel#riskBanner {
-                color: #fff7f7; background-color: rgba(176, 18, 29, 238);
-                border: 1px solid #ff6973; border-radius: 8px;
-                padding: 9px 12px; font-weight: 700; font-size: 13px;
+                color: #fff7f7;
+                background-color: rgba(176, 18, 29, 125);
+                border: 1px solid rgba(255, 120, 128, 230);
+                border-radius: 8px;
+                padding: 9px 12px;
+                font-weight: 700;
+                font-size: 13px;
             }
-            QLabel#statusLabel { color: #edf2f9; font-size: 12px; }
+            QLabel#statusLabel {
+                color: #fffaf0;
+                font-size: 12px;
+                font-weight: 600;
+            }
             QPushButton {
-                color: #142238; background-color: #eab05e; border: 1px solid #f5c983;
-                border-radius: 7px; padding: 8px 15px; font-weight: 700; min-height: 18px;
+                color: #fffaf0;
+                background-color: rgba(234, 176, 94, 70);
+                border: 1px solid rgba(255, 225, 170, 220);
+                border-radius: 7px;
+                padding: 8px 15px;
+                font-weight: 700;
+                min-height: 18px;
             }
-            QPushButton:hover { background-color: #f2c276; border-color: #ffe0a7; }
-            QPushButton:pressed { background-color: #cf8737; }
-            QPushButton:disabled { color: #8e98a5; background-color: rgba(86, 96, 110, 205); border-color: #6f7885; }
-            QPushButton#secondaryButton { color: #fff8ed; background-color: rgba(27, 71, 105, 225); border-color: #7ab7df; }
-            QPushButton#secondaryButton:hover { background-color: rgba(39, 91, 129, 240); }
-            QPushButton#primaryButton { font-size: 15px; min-height: 28px; background-color: #f0aa4f; border-color: #ffd18d; }
+            QPushButton:hover {
+                background-color: rgba(242, 194, 118, 140);
+                border-color: #ffe0a7;
+            }
+            QPushButton:pressed {
+                background-color: rgba(207, 135, 55, 170);
+            }
+            QPushButton:disabled {
+                color: #d5dbe4;
+                background-color: rgba(86, 96, 110, 90);
+                border-color: rgba(180, 188, 198, 140);
+            }
+            QPushButton#secondaryButton {
+                color: #fff8ed;
+                background-color: rgba(27, 71, 105, 70);
+                border-color: rgba(150, 210, 245, 210);
+            }
+            QPushButton#secondaryButton:hover {
+                background-color: rgba(39, 91, 129, 140);
+            }
+            QPushButton#primaryButton {
+                font-size: 15px;
+                min-height: 28px;
+                color: #fffdf8;
+                background-color: rgba(240, 170, 79, 85);
+                border-color: #ffd18d;
+            }
             QLineEdit, QComboBox {
-                color: #17243a; background-color: rgba(249, 246, 238, 242);
-                border: 1px solid rgba(239, 182, 103, 210); border-radius: 6px;
-                padding: 7px 9px; selection-background-color: #c87832;
+                color: #fffdf8;
+                background-color: rgba(10, 24, 40, 45);
+                border: 1px solid rgba(255, 214, 150, 190);
+                border-radius: 6px;
+                padding: 7px 9px;
+                selection-background-color: rgba(200, 120, 50, 180);
+                selection-color: #ffffff;
             }
-            QLineEdit:focus, QComboBox:focus { border: 2px solid #f2b866; padding: 6px 8px; }
-            QComboBox QAbstractItemView { color: #17243a; background: #fbf7ee; selection-background-color: #e5a353; }
+            QLineEdit:focus, QComboBox:focus {
+                border: 2px solid #f2b866;
+                padding: 6px 8px;
+                background-color: rgba(10, 24, 40, 60);
+            }
+            QComboBox QAbstractItemView {
+                color: #fffdf8;
+                background: rgba(12, 28, 46, 210);
+                selection-background-color: rgba(229, 163, 83, 180);
+                border: 1px solid rgba(255, 214, 150, 170);
+            }
             QTableWidget {
-                color: #17243a; background-color: rgba(249, 246, 238, 238);
-                alternate-background-color: rgba(232, 224, 208, 238);
-                border: 1px solid rgba(238, 181, 102, 210); border-radius: 7px;
-                selection-background-color: #d1843d; selection-color: white;
+                color: #fffdf8;
+                background-color: rgba(8, 20, 34, 22);
+                alternate-background-color: rgba(18, 36, 56, 32);
+                border: 1px solid rgba(255, 214, 150, 175);
+                border-radius: 7px;
+                gridline-color: rgba(255, 214, 150, 70);
+                selection-background-color: rgba(209, 132, 61, 150);
+                selection-color: #ffffff;
+            }
+            QTableWidget::item {
+                color: #fffdf8;
+                background: transparent;
+                padding: 4px;
+            }
+            QTableWidget::item:selected {
+                color: #ffffff;
+                background: rgba(209, 132, 61, 150);
             }
             QHeaderView::section {
-                color: #132137; background-color: #e8a64d; border: none;
-                border-right: 1px solid #c47a32; padding: 8px; font-weight: 700;
+                color: #fff8ec;
+                background-color: rgba(232, 166, 77, 85);
+                border: none;
+                border-right: 1px solid rgba(255, 220, 170, 120);
+                padding: 8px;
+                font-weight: 700;
             }
-            QProgressBar { background-color: rgba(24, 49, 72, 225); border: 1px solid rgba(125, 174, 207, 170); border-radius: 5px; height: 9px; }
-            QProgressBar::chunk { background-color: #efad55; border-radius: 4px; }
-            QScrollBar:vertical { background: rgba(20, 36, 55, 90); width: 11px; margin: 0; }
-            QScrollBar::handle:vertical { background: #c8873f; border-radius: 5px; min-height: 28px; }
+            QProgressBar {
+                background-color: rgba(24, 49, 72, 80);
+                border: 1px solid rgba(180, 220, 245, 160);
+                border-radius: 5px;
+                height: 9px;
+            }
+            QProgressBar::chunk {
+                background-color: rgba(239, 173, 85, 180);
+                border-radius: 4px;
+            }
+            QScrollBar:vertical {
+                background: rgba(20, 36, 55, 40);
+                width: 11px;
+                margin: 0;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(200, 135, 63, 150);
+                border-radius: 5px;
+                min-height: 28px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0;
+            }
         """)
 
     def add_path(self, path: Path) -> None:
@@ -735,3 +853,5 @@ def launch_gui(initial_files: list[Path] | None = None, log_path: Path | None = 
     window = MainWindow(initial_files=initial_files, log_path=log_path)
     window.show()
     app.exec()
+
+
