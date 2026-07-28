@@ -46,6 +46,13 @@ class SignatureInfo:
     signing_time: str | None
     has_byte_range: bool
     contents_length: int
+    # PKCS7 证书解析信息（同一签署事件内字段共享）
+    signer_name: str | None = None
+    cert_serial_hex: str | None = None
+    cert_issuer_str: str | None = None
+    cert_valid_from: str | None = None
+    cert_valid_to: str | None = None
+    has_timestamp: bool = False
 
     @property
     def is_signed(self) -> bool:

@@ -23,6 +23,10 @@ from adjust_pdf.models import (
     ProcessResult,
     SignatureInfo,
 )
+from adjust_pdf.signature_parser import (
+    parse_pkcs7_signed_data,
+    extract_signing_time_from_pdf_timestamp,
+)
 
 
 class PypdfEngine:
@@ -61,6 +65,8 @@ class PypdfEngine:
             return ()
         root = root_reference.get_object()
         results: list[SignatureInfo] = []
+        # 缓存已解析的 PKCS7 信息，键为 /V 对象的 idnum
+        pkcs7_cache: dict[int, dict[str, object]] = {}
 
         acroform_reference = root.get("/AcroForm")
         if acroform_reference is not None:
@@ -71,6 +77,7 @@ class PypdfEngine:
                     field_reference=field,
                     page_numbers=page_numbers,
                     results=results,
+                    pkcs7_cache=pkcs7_cache,
                 )
 
         permissions = root.get("/Perms")
@@ -84,6 +91,7 @@ class PypdfEngine:
                     value_reference=doc_mdp,
                     page_numbers=page_numbers,
                     results=results,
+                    pkcs7_cache=pkcs7_cache,
                 )
 
         return tuple(results)
@@ -94,6 +102,7 @@ class PypdfEngine:
         field_reference: object,
         page_numbers: dict[int, int],
         results: list[SignatureInfo],
+        pkcs7_cache: dict[int, dict[str, object]],
         parent_name: str = "",
         inherited_field_type: object | None = None,
     ) -> None:
@@ -111,6 +120,7 @@ class PypdfEngine:
                 value_reference=field.get("/V"),
                 page_numbers=page_numbers,
                 results=results,
+                pkcs7_cache=pkcs7_cache,
             )
 
         children = field.get("/Kids", [])
@@ -119,6 +129,7 @@ class PypdfEngine:
                 field_reference=child,
                 page_numbers=page_numbers,
                 results=results,
+                pkcs7_cache=pkcs7_cache,
                 parent_name=field_name,
                 inherited_field_type=field_type,
             )
@@ -131,6 +142,7 @@ class PypdfEngine:
         value_reference: object | None,
         page_numbers: dict[int, int],
         results: list[SignatureInfo],
+        pkcs7_cache: dict[int, dict[str, object]],
     ) -> None:
         page_number = cls._page_number_from_field(field_object, page_numbers)
         if value_reference is None:
@@ -160,6 +172,35 @@ class PypdfEngine:
             except TypeError:
                 contents_length = 0
 
+        # ── 解析 PKCS7 签名数据，提取证书/签名者信息 ──
+        value_id = getattr(value_reference, "idnum", id(value_object))
+        if value_id not in pkcs7_cache:
+            pkcs7_info: dict[str, object] = {}
+            try:
+                raw = contents.original_bytes if hasattr(contents, "original_bytes") else bytes(contents)  # type: ignore[arg-type]
+                raw = raw.rstrip(b"\x00")
+                signers = parse_pkcs7_signed_data(raw)
+                if signers:
+                    si = signers[0]
+                    pkcs7_info["signer_name"] = si.signer_name
+                    pkcs7_info["cert_serial_hex"] = si.cert_serial_hex
+                    pkcs7_info["cert_issuer_str"] = si.cert_issuer_str
+                    pkcs7_info["cert_valid_from"] = si.cert_valid_from
+                    pkcs7_info["cert_valid_to"] = si.cert_valid_to
+                    pkcs7_info["has_timestamp"] = si.has_timestamp
+                    # 优先用 PKCS7 中的签署时间，否则用 PDF /M 字段
+                    pkcs7_info["signing_time"] = (
+                        si.signing_time
+                        or extract_signing_time_from_pdf_timestamp(
+                            cls._text_value(value_object.get("/M"))
+                        )
+                    )
+            except Exception:
+                pass
+            pkcs7_cache[value_id] = pkcs7_info
+        else:
+            pkcs7_info = pkcs7_cache[value_id]
+
         results.append(
             SignatureInfo(
                 field_name=field_name,
@@ -168,9 +209,18 @@ class PypdfEngine:
                 subfilter=cls._text_value(value_object.get("/SubFilter")),
                 reason=cls._text_value(value_object.get("/Reason")),
                 location=cls._text_value(value_object.get("/Location")),
-                signing_time=cls._text_value(value_object.get("/M")),
+                signing_time=(
+                    str(pkcs7_info.get("signing_time") or "")
+                    or cls._text_value(value_object.get("/M"))
+                ),
                 has_byte_range=value_object.get("/ByteRange") is not None,
                 contents_length=contents_length,
+                signer_name=str(pkcs7_info.get("signer_name") or ""),
+                cert_serial_hex=str(pkcs7_info.get("cert_serial_hex") or ""),
+                cert_issuer_str=str(pkcs7_info.get("cert_issuer_str") or ""),
+                cert_valid_from=str(pkcs7_info.get("cert_valid_from") or ""),
+                cert_valid_to=str(pkcs7_info.get("cert_valid_to") or ""),
+                has_timestamp=bool(pkcs7_info.get("has_timestamp")),
             )
         )
 
