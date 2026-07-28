@@ -61,7 +61,6 @@ class PypdfEngine:
             return ()
         root = root_reference.get_object()
         results: list[SignatureInfo] = []
-        seen_signature_objects: set[int] = set()
 
         acroform_reference = root.get("/AcroForm")
         if acroform_reference is not None:
@@ -72,7 +71,6 @@ class PypdfEngine:
                     field_reference=field,
                     page_numbers=page_numbers,
                     results=results,
-                    seen_signature_objects=seen_signature_objects,
                 )
 
         permissions = root.get("/Perms")
@@ -86,7 +84,6 @@ class PypdfEngine:
                     value_reference=doc_mdp,
                     page_numbers=page_numbers,
                     results=results,
-                    seen_signature_objects=seen_signature_objects,
                 )
 
         return tuple(results)
@@ -97,7 +94,6 @@ class PypdfEngine:
         field_reference: object,
         page_numbers: dict[int, int],
         results: list[SignatureInfo],
-        seen_signature_objects: set[int],
         parent_name: str = "",
         inherited_field_type: object | None = None,
     ) -> None:
@@ -115,7 +111,6 @@ class PypdfEngine:
                 value_reference=field.get("/V"),
                 page_numbers=page_numbers,
                 results=results,
-                seen_signature_objects=seen_signature_objects,
             )
 
         children = field.get("/Kids", [])
@@ -124,7 +119,6 @@ class PypdfEngine:
                 field_reference=child,
                 page_numbers=page_numbers,
                 results=results,
-                seen_signature_objects=seen_signature_objects,
                 parent_name=field_name,
                 inherited_field_type=field_type,
             )
@@ -137,7 +131,6 @@ class PypdfEngine:
         value_reference: object | None,
         page_numbers: dict[int, int],
         results: list[SignatureInfo],
-        seen_signature_objects: set[int],
     ) -> None:
         page_number = cls._page_number_from_field(field_object, page_numbers)
         if value_reference is None:
@@ -157,10 +150,6 @@ class PypdfEngine:
             return
 
         value_object = value_reference.get_object()
-        signature_id = getattr(value_reference, "idnum", id(value_object))
-        if signature_id in seen_signature_objects:
-            return
-        seen_signature_objects.add(signature_id)
 
         contents = value_object.get("/Contents")
         try:
