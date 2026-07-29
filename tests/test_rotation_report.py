@@ -46,8 +46,8 @@ def test_rotation_report_contains_page_details() -> None:
 
     assert "总页数：3" in report
     assert "发现 2 个带旋转属性的页面" in report
-    assert "第 1 页：Rotate=270" in report
-    assert "第 3 页：Rotate=90" in report
+    assert "第 1 页：旋转角度：270°" in report
+    assert "第 3 页：旋转角度：90°" in report
 
 
 def test_multiple_reports_are_separated() -> None:

@@ -20,7 +20,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1
 ## 构建产物
 
 ```text
-dist\PDF旋转固化工具.exe
+dist\PDF-如一_v0.5.3.exe
 ```
 
 ## 人工验收
@@ -41,7 +41,7 @@ dist\PDF旋转固化工具.exe
 将以下文件一起压缩：
 
 ```text
-PDF旋转固化工具.exe
+PDF-如一_v0.5.3.exe
 用户使用手册.pdf 或 USER_GUIDE.md
 版本说明.txt
 ```

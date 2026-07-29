@@ -71,7 +71,7 @@ try {
         '--noconfirm',
         '--clean',
         '--windowed',
-        '--name', 'PDF旋转固化工具',
+        '--name', 'PDF-如一',
         '--paths', (Join-Path $root 'src'),
         '--icon', $iconPath,
         '--add-data', "$iconPath;resources",
@@ -94,11 +94,22 @@ try {
         throw 'PyInstaller 构建失败。'
     }
 
+    # 构建完成后重命名产物，追加版本号
+    $versionFile = Join-Path $root 'src\adjust_pdf\__init__.py'
+    $versionLine = Select-String -Path $versionFile -Pattern '__version__\s*=\s*"(.*)"'
+    $version = if ($versionLine) { $versionLine.Matches.Groups[1].Value } else { '0.0.0' }
+
     if ($Mode -eq 'OneFile') {
-        $artifact = Join-Path $root 'dist\PDF旋转固化工具.exe'
+        $artifact = Join-Path $root "dist\PDF-如一.exe"
     }
     else {
-        $artifact = Join-Path $root 'dist\PDF旋转固化工具\PDF旋转固化工具.exe'
+        $artifact = Join-Path $root "dist\PDF-如一\PDF-如一.exe"
+    }
+
+    $finalArtifact = Join-Path $root "dist\PDF-如一_v${version}.exe"
+    if (Test-Path -LiteralPath $artifact) {
+        Move-Item -LiteralPath $artifact -Destination $finalArtifact -Force
+        $artifact = $finalArtifact
     }
 
     if (-not (Test-Path -LiteralPath $artifact)) {

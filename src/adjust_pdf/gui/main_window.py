@@ -90,7 +90,7 @@ class BackgroundWidget(QWidget):
 
 
 class MainWindow(QMainWindow):
-    """PDF 页面旋转固化工具主窗口。"""
+    """PDF·如一 主窗口。"""
 
     def __init__(
         self,
@@ -125,7 +125,7 @@ class MainWindow(QMainWindow):
             self.add_path(file_path)
 
     def _configure_window(self) -> None:
-        self.setWindowTitle(f"PDF 页面旋转固化工具 {__version__}")
+        self.setWindowTitle(f"PDF·如一 {__version__}")
         self.resize(1100, 790)
         self.setMinimumSize(900, 700)
         self.setAcceptDrops(True)
@@ -150,17 +150,17 @@ class MainWindow(QMainWindow):
         title_row = QHBoxLayout()
         title_block = QVBoxLayout()
         title_block.setSpacing(2)
-        title = QLabel("PDF 页面旋转固化工具")
+        title = QLabel("PDF·如一")
         title.setObjectName("titleLabel")
-        subtitle = QLabel("保持显示方向不变，将页面 /Rotate 属性真正固化到内容中")
+        subtitle = QLabel("消除页面旋转属性，保持 PDF 视觉不变——内容与表象，始终如一")
         subtitle.setObjectName("subtitleLabel")
         title_block.addWidget(title)
         title_block.addWidget(subtitle)
         title_row.addLayout(title_block, 1)
-        skin_badge = QLabel("PySide6  ·  LTY 全局皮肤")
-        skin_badge.setObjectName("skinBadge")
-        skin_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_row.addWidget(skin_badge, 0, Qt.AlignmentFlag.AlignTop)
+        motto_badge = QLabel("按时下班 · 身体健康")
+        motto_badge.setObjectName("mottoBadge")
+        motto_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_row.addWidget(motto_badge, 0, Qt.AlignmentFlag.AlignTop)
         header_layout.addLayout(title_row)
 
         self.risk_banner = QLabel("⚠  " + RISK_BANNER_TEXT)
@@ -366,7 +366,7 @@ class MainWindow(QMainWindow):
                 font-size: 15px;
                 font-weight: 700;
             }
-            QLabel#skinBadge {
+            QLabel#mottoBadge {
                 color: #fff8ec;
                 background-color: rgba(20, 42, 68, 95);
                 border: 1px solid rgba(255, 210, 140, 180);
@@ -861,8 +861,12 @@ class MainWindow(QMainWindow):
         if self.page_props_results:
             parts.append(format_multiple_page_property_reports(self.page_props_results))
         if self.page_props_failures:
-            parts.append("检查失败：")
-            parts.extend(f"{path.name}：{error}" for path, error in self.page_props_failures)
+            from html import escape
+            fail_lines = ["<br>", escape("检查失败：")]
+            fail_lines.extend(
+                escape(f"{path.name}：{error}") for path, error in self.page_props_failures
+            )
+            parts.append("<br>\n".join(fail_lines))
         self._show_page_props_report("\n\n".join(parts or ["没有可显示的检查结果。"]))
 
     def _show_page_props_report(self, report: str) -> None:
@@ -874,7 +878,7 @@ class MainWindow(QMainWindow):
         text = QTextEdit()
         text.setReadOnly(True)
         text.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
-        text.setPlainText(report)
+        text.setHtml(f"<pre style='font-family:Consolas,Courier New,monospace;font-size:13px;margin:0'>{report}</pre>")
         close_button = QPushButton("关闭")
         close_button.clicked.connect(dialog.accept)
         button_row = QHBoxLayout()
@@ -945,7 +949,7 @@ class MainWindow(QMainWindow):
 
 def launch_gui(initial_files: list[Path] | None = None, log_path: Path | None = None) -> None:
     app = QApplication.instance() or QApplication(sys.argv)
-    app.setApplicationName("PDF 页面旋转固化工具")
+    app.setApplicationName("PDF·如一")
     app.setApplicationVersion(__version__)
     icon_path = resource_path("resources/app.ico")
     if icon_path.exists():

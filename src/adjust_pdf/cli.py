@@ -36,7 +36,7 @@ def parse_page_numbers(value: str) -> tuple[int, ...]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="adjust-pdf-cli",
-        description="将 PDF 页面旋转属性固化到页面内容中。",
+        description="检查 PDF 页面属性并消除旋转，保持显示方向不变。",
     )
     parser.add_argument("files", nargs="+", type=Path, help="一个或多个 PDF 文件")
     parser.add_argument(

@@ -31,7 +31,7 @@ Rotate：270
 运行真实样本 EXE 测试：
 
 ```powershell
-.\.venv\Scripts\python.exe .\scripts\verify_real_fixture.py .\dist\PDF旋转固化工具.exe
+.\.venv\Scripts\python.exe .\scripts\verify_real_fixture.py .\dist\PDF-如一.exe
 ```
 
 生成的 `*_旋转已固化*.pdf` 属于测试产物，不应提交到仓库。

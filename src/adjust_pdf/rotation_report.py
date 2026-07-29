@@ -39,8 +39,8 @@ def format_rotation_report(info: DocumentInfo) -> str:
         for page in rotated:
             lines.append(
                 f"第 {page.page_number} 页："
-                f"Rotate={page.rotation}，"
-                f"底层尺寸={page.width:.2f} × {page.height:.2f}"
+                f"旋转角度：{page.rotation}°，"
+                f"{page.width:.2f}（宽） × {page.height:.2f}（高）"
             )
 
     lines.append("")

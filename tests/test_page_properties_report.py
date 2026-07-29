@@ -33,9 +33,9 @@ def test_single_page_report_contains_all_properties() -> None:
     assert "文件：测试.pdf" in report
     assert "总页数：1" in report
     assert "第 1 页" in report
-    assert "宽（Width）：841.92 pt" in report
-    assert "高（Height）：595.20 pt" in report
-    assert "旋转（Rotate）：270°" in report
+    assert "旋转角度：270°" in report
+    assert "841.92（宽）" in report
+    assert "595.20（高）" in report
 
 
 def test_multiple_pages_show_each_page() -> None:
@@ -45,14 +45,34 @@ def test_multiple_pages_show_each_page() -> None:
     assert "第 1 页" in report
     assert "第 2 页" in report
     assert "第 3 页" in report
-    assert report.count("宽（Width）：841.92 pt") == 3
+    assert report.count("（宽）") == 3
 
 
 def test_zero_rotation_is_displayed() -> None:
     info = make_info((0,))
     report = format_page_property_detail(info)
 
-    assert "旋转（Rotate）：0°" in report
+    assert "旋转角度：0°" in report
+
+
+def test_rotated_page_is_wrapped_in_red_span() -> None:
+    info = make_info((270, 0))
+    report = format_page_property_detail(info)
+
+    assert '<span style="color:#cc2222">' in report
+    # 有旋转的页面行在红色 span 内
+    assert '第 1 页' in report
+    # 无旋转的页面单独存在
+    assert "第 2 页" in report
+    first_page_end = report.index("第 2 页") if "第 2 页" in report else len(report)
+    assert "</span>" in report[:first_page_end]
+
+
+def test_no_red_span_when_none_rotated() -> None:
+    info = make_info((0, 0))
+    report = format_page_property_detail(info)
+
+    assert "color:#cc2222" not in report
 
 
 def test_multiple_files_are_separated() -> None:
