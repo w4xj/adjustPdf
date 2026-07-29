@@ -1292,6 +1292,43 @@ Page 3 0 R
 
 QPDF 的 QDF 模式可以把某些对象流展开，便于学习，但展开后的文件主要用于分析，不建议直接把它当作最终交付文件。
 
+## 附录 B.1 PKCS7 签名数据解析
+
+PDF 签名字段的 `/Contents` 值通常是 DER 编码的 PKCS7/CMS SignedData。程序使用 `src/adjust_pdf/signature_parser.py` 中的自定义 ASN.1 解析器提取证书信息：
+
+```
+ContentInfo
+  └─ contentType = 1.2.840.113549.1.7.2 (signedData)
+  └─ content [0] EXPLICIT
+       └─ SignedData
+            ├─ version
+            ├─ digestAlgorithms
+            ├─ contentInfo
+            ├─ certificates [0] IMPLICIT     ← X.509 证书
+            │   └─ Certificate
+            │        ├─ TBSCertificate
+            │        │   ├─ serialNumber
+            │        │   ├─ issuer           ← 颁发者
+            │        │   ├─ validity         ← 有效期
+            │        │   └─ subject          ← 主题（内含 CN=签名人）
+            │        ├─ signatureAlgorithm
+            │        └─ signatureValue
+            ├─ crls [1] IMPLICIT（可选）
+            └─ signerInfos
+                 └─ SignerInfo
+                      ├─ version
+                      ├─ sid (IssuerAndSerialNumber)
+                      ├─ digestAlgorithm
+                      ├─ signedAttrs [0] OPTIONAL
+                      ├─ signatureAlgorithm
+                      ├─ signature
+                      └─ unsignedAttrs [1] OPTIONAL  ← 时间戳令牌
+```
+
+解析器纯 Python 实现，支持国密 SM2/SM3 OID（1.2.156.10197.1.*），不依赖 OpenSSL。解析失败不会影响签名检测主流程。
+
+签名事件分组规则：文档中 `/AcroForm /Fields` 的每个 `/FT /Sig` 字段作为一个签名字段计数。多个字段若指向同一 PKCS7 数据（同一 `/V` 字典），则归为同一签署事件。
+
 # 附录 C：参考资料
 
 - Adobe PDF 1.7 Reference / PDF 32000-1: PDF 语法和对象模型；

@@ -80,17 +80,20 @@ src/adjust_pdf/rotation_report.py
 
 `PypdfEngine.inspect()` 会扫描 AcroForm 签名字段和 Catalog `/Perms /DocMDP`。只有同时存在有效 `/ByteRange` 和非空 `/Contents` 时，字段才被判定为已写入签名数据。
 
+程序还会自动解析 `/Contents` 中的 PKCS7/CMS SignedData DER 结构，提取证书信息（签名人、颁发机构、序列号、有效期）并检测时间戳。同一签署事件内的多个签名字段会自动合并分组展示。
+
 相关模块：
 
 ```text
-src/adjust_pdf/models.py             SignatureInfo
-src/adjust_pdf/signature_report.py   风险提示和签名报告
+src/adjust_pdf/models.py              SignatureInfo
+src/adjust_pdf/signature_report.py     风险提示和签名报告
+src/adjust_pdf/signature_parser.py     PKCS7 解析和证书提取
 src/adjust_pdf/engines/pypdf_engine.py
 ```
 
-GUI 点击“开始处理”后先在后台执行签名预检。预检失败时整批中止；检测到签名时必须在主线程显示风险确认窗口。命令行默认拒绝已签名文件，只有显式传入 `--allow-signed` 才允许处理。
+GUI 点击”开始处理”后先在后台执行签名预检。预检失败时整批中止；检测到签名时必须在主线程显示风险确认窗口。命令行默认拒绝已签名文件，只有显式传入 `--allow-signed` 才允许处理。
 
-这里的检测不执行证书链、吊销状态、时间戳或密码学有效性验证。
+PKCS7 解析使用自定义 ASN.1 DER 解析器（配合 asn1crypto 库），支持国密 SM2/SM3 标准证书，不依赖 OpenSSL 或 cryptography 等对国密算法支持有限的库。解析失败不会影响签名检测结果，证书信息字段保持空值。
 ## 10. 构建 EXE
 
 单文件版本：
