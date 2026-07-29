@@ -39,6 +39,7 @@ from adjust_pdf import __version__
 from adjust_pdf.exceptions import AdjustPdfError
 from adjust_pdf.models import DocumentInfo, PageSelectionMode, ProcessOptions, ProcessResult
 from adjust_pdf.page_ranges import parse_page_numbers
+from adjust_pdf.page_properties_report import format_multiple_page_property_reports
 from adjust_pdf.resources import resource_path
 from adjust_pdf.rotation_report import format_multiple_rotation_reports, format_rotation_summary
 from adjust_pdf.service import PdfProcessingService
@@ -108,6 +109,8 @@ class MainWindow(QMainWindow):
         self.failed_results: list[tuple[Path, str]] = []
         self.inspection_results: list[DocumentInfo] = []
         self.inspection_failures: list[tuple[Path, str]] = []
+        self.page_props_results: list[DocumentInfo] = []
+        self.page_props_failures: list[tuple[Path, str]] = []
 
         self._configure_window()
         self._build_widgets()
@@ -223,10 +226,14 @@ class MainWindow(QMainWindow):
         self.inspect_button = QPushButton("检查页面旋转")
         self.inspect_button.setObjectName("secondaryButton")
         self.inspect_button.clicked.connect(self._start_inspection)
+        self.page_props_button = QPushButton("检查页面属性")
+        self.page_props_button.setObjectName("secondaryButton")
+        self.page_props_button.clicked.connect(self._start_page_props)
         button_row.addWidget(self.add_button)
         button_row.addWidget(self.remove_button)
         button_row.addWidget(self.clear_button)
         button_row.addStretch(1)
+        button_row.addWidget(self.page_props_button)
         button_row.addWidget(self.inspect_button)
         file_layout.addLayout(button_row)
         root_layout.addWidget(file_card, 1)
@@ -306,6 +313,7 @@ class MainWindow(QMainWindow):
             self.add_button,
             self.remove_button,
             self.clear_button,
+            self.page_props_button,
             self.inspect_button,
             self.start_button,
             self.mode_combo,
@@ -587,6 +595,34 @@ class MainWindow(QMainWindow):
                 self.events.put(("inspect_failure", item_id, path, f"发生未预期错误：{error}"))
         self.events.put(("inspect_done",))
 
+    def _start_page_props(self) -> None:
+        """启动检查页面属性。"""
+        if self.processing:
+            return
+        if not self.file_items:
+            QMessageBox.warning(self, "没有文件", "请先添加至少一个 PDF 文件。")
+            return
+        tasks = list(self.file_items.items())
+        self.processing = True
+        self.page_props_results.clear()
+        self.page_props_failures.clear()
+        self._set_controls_enabled(False)
+        self._start_busy()
+        self._set_status(f"正在检查页面属性 0/{len(tasks)}……")
+        threading.Thread(target=self._page_props_worker, args=(tasks,), daemon=True).start()
+
+    def _page_props_worker(self, tasks: list[tuple[str, Path]]) -> None:
+        for index, (item_id, path) in enumerate(tasks, start=1):
+            self.events.put(("page_props_status", item_id, index, len(tasks)))
+            try:
+                self.events.put(("page_props_success", item_id, path, self.service.inspect(path)))
+            except AdjustPdfError as error:
+                self.events.put(("page_props_failure", item_id, path, str(error)))
+            except Exception as error:
+                self.logger.exception("检查页面属性时发生未预期错误：%s", path)
+                self.events.put(("page_props_failure", item_id, path, f"发生未预期错误：{error}"))
+        self.events.put(("page_props_done",))
+
     def _start_processing(self) -> None:
         if self.processing:
             return
@@ -673,6 +709,20 @@ class MainWindow(QMainWindow):
                     self._set_table_values(item_id, status="检查失败", output=error)
                 elif kind == "inspect_done":
                     self._finish_inspection()
+                elif kind == "page_props_status":
+                    _, item_id, index, total = event
+                    self._set_table_values(item_id, status="检查页面属性中")
+                    self._set_status(f"正在检查页面属性 {index}/{total}……")
+                elif kind == "page_props_success":
+                    _, item_id, _path, info = event
+                    self.page_props_results.append(info)
+                    self._set_table_values(item_id, status="检查完成")
+                elif kind == "page_props_failure":
+                    _, item_id, path, error = event
+                    self.page_props_failures.append((path, error))
+                    self._set_table_values(item_id, status="检查失败", output=error)
+                elif kind == "page_props_done":
+                    self._finish_page_props()
                 elif kind == "status":
                     _, item_id, status, index, total = event
                     self._set_table_values(item_id, status=status)
@@ -783,6 +833,41 @@ class MainWindow(QMainWindow):
     def _show_rotation_report(self, report: str) -> None:
         dialog = QDialog(self)
         dialog.setWindowTitle("页面旋转与签名检查结果")
+        dialog.resize(860, 590)
+        dialog.setMinimumSize(650, 440)
+        layout = QVBoxLayout(dialog)
+        text = QTextEdit()
+        text.setReadOnly(True)
+        text.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+        text.setPlainText(report)
+        close_button = QPushButton("关闭")
+        close_button.clicked.connect(dialog.accept)
+        button_row = QHBoxLayout()
+        button_row.addStretch(1)
+        button_row.addWidget(close_button)
+        layout.addWidget(text, 1)
+        layout.addLayout(button_row)
+        dialog.setStyleSheet(self.styleSheet() + "QTextEdit{background:#f7f2e8;color:#17243a;border:1px solid #d89a4a;padding:8px;}")
+        dialog.exec()
+
+    def _finish_page_props(self) -> None:
+        self.processing = False
+        self._stop_busy()
+        self._set_controls_enabled(True)
+        success_count = len(self.page_props_results)
+        failure_count = len(self.page_props_failures)
+        self._set_status(f"页面属性检查结束：成功 {success_count} 个，失败 {failure_count} 个")
+        parts: list[str] = []
+        if self.page_props_results:
+            parts.append(format_multiple_page_property_reports(self.page_props_results))
+        if self.page_props_failures:
+            parts.append("检查失败：")
+            parts.extend(f"{path.name}：{error}" for path, error in self.page_props_failures)
+        self._show_page_props_report("\n\n".join(parts or ["没有可显示的检查结果。"]))
+
+    def _show_page_props_report(self, report: str) -> None:
+        dialog = QDialog(self)
+        dialog.setWindowTitle("PDF 页面属性检查结果")
         dialog.resize(860, 590)
         dialog.setMinimumSize(650, 440)
         layout = QVBoxLayout(dialog)

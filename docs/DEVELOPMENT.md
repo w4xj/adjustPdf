@@ -65,16 +65,17 @@ $env:PYTHONPATH = "$PWD\src"
 $env:PYTHONPATH = "$PWD\src"
 .\.venv\Scripts\python.exe -m adjust_pdf --cli input.pdf --mode selected --pages 1,5-9,12
 ```
-## 8. 页面旋转检查
+## 8. 页面旋转检查和页面属性检查
 
-GUI 中的“检查页面旋转”调用 `PdfProcessingService.inspect()`，不会写入输出文件。检查结果使用 `rotation_report.py` 格式化，再由主线程显示到可滚动窗口。
+GUI 中的”检查页面旋转”和”检查页面属性”都调用 `PdfProcessingService.inspect()`，不会写入输出文件。前者只显示有旋转属性的页面，附带签名状态；后者逐页显示宽、高、旋转属性。
 
 后台检查通过队列和 QTimer 把事件传回 Qt 主线程，避免大型 PDF 读取时冻结窗口。报告和文件列表使用同一个 `DocumentInfo` 数据模型。
 
-新增相关模块：
+相关模块：
 
 ```text
-src/adjust_pdf/rotation_report.py
+src/adjust_pdf/rotation_report.py          旋转和签名检查报告
+src/adjust_pdf/page_properties_report.py    页面属性详细报告
 ```
 ## 9. 数字签名预检
 
