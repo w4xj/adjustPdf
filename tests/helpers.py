@@ -30,10 +30,7 @@ def create_test_pdf(
         page = writer.add_blank_page(width=200, height=100)
 
         content = DecodedStreamObject()
-        content.set_data(
-            b"q\n1 0 0 rg\n15 20 60 30 re f\n"
-            b"0 0 1 rg\n110 55 35 20 re f\nQ\n"
-        )
+        content.set_data(b"q\n1 0 0 rg\n15 20 60 30 re f\n0 0 1 rg\n110 55 35 20 re f\nQ\n")
         page[NameObject("/Contents")] = writer._add_object(content)
 
         if rotation:
@@ -57,9 +54,7 @@ def create_test_pdf(
                     ),
                 }
             )
-            page[NameObject("/Annots")] = ArrayObject(
-                [writer._add_object(annotation)]
-            )
+            page[NameObject("/Annots")] = ArrayObject([writer._add_object(annotation)])
 
     if signed or empty_signature_field:
         page = writer.pages[0]

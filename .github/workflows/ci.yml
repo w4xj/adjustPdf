@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test / Python ${{ matrix.python-version }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install development dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Check formatting
+        run: python -m ruff format --check .
+      - name: Lint
+        run: python -m ruff check .
+      - name: Run tests
+        run: python -m pytest --cov=adjust_pdf --cov-report=term-missing --cov-report=xml
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
+          if-no-files-found: ignore
+
+  build:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Build and smoke-test EXE
+        shell: pwsh
+        run: .\scripts\build.ps1
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf-ruyi-windows
+          path: dist/*.exe
+          if-no-files-found: error

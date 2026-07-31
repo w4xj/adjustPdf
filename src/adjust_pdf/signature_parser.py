@@ -35,7 +35,7 @@ def _parse_tag(data: bytes, offset: int) -> tuple[int, int, bytes, int]:
     length = data[offset]
     offset += 1
     if length & 0x80:
-        num_bytes = length & 0x7f
+        num_bytes = length & 0x7F
         length = int.from_bytes(data[offset : offset + num_bytes], "big")
         offset += num_bytes
     value = data[offset : offset + length]
@@ -54,7 +54,7 @@ def _decode_oid(value: bytes) -> str:
         while pos < len(value):
             byte = value[pos]
             pos += 1
-            val = (val << 7) | (byte & 0x7f)
+            val = (val << 7) | (byte & 0x7F)
             if not (byte & 0x80):
                 break
         parts.append(str(val))
@@ -119,9 +119,7 @@ def _parse_rdn_sequence(data: bytes, offset: int) -> dict[str, str]:
             if sv_pos < len(seq_value):
                 val_tag, val_len, val_bytes, _ = _parse_tag(seq_value, sv_pos)
                 try:
-                    val_str = val_bytes.decode(
-                        "utf-8", errors="replace"
-                    )
+                    val_str = val_bytes.decode("utf-8", errors="replace")
                 except Exception:
                     val_str = val_bytes.decode("ascii", errors="replace")
                 # 有些字段（如 OU）可以是数组，取第一个非数组值
@@ -222,7 +220,7 @@ def parse_pkcs7_signed_data(raw: bytes) -> list[SignerInfo]:
     cert_raw: bytes | None = None
     if pos < len(sd_value):
         next_tag = sd_value[pos]
-        if next_tag == 0xa0:  # [0] IMPLICIT - CertificateSet
+        if next_tag == 0xA0:  # [0] IMPLICIT - CertificateSet
             _, _, cert_set_value, pos = _parse_tag(sd_value, pos)
             # CertificateSet 是 SET (0x31) 或 SEQUENCE (0x30)
             if pos <= len(sd_value):
@@ -250,7 +248,7 @@ def parse_pkcs7_signed_data(raw: bytes) -> list[SignerInfo]:
 
     # ── 4. CRLs (跳过，[1] IMPLICIT 标签 0xa1) ──
     while pos < len(sd_value):
-        if sd_value[pos] in (0xa0, 0xa1):
+        if sd_value[pos] in (0xA0, 0xA1):
             pos = _skip_tlv(sd_value, pos)
         else:
             break
@@ -293,7 +291,7 @@ def parse_pkcs7_signed_data(raw: bytes) -> list[SignerInfo]:
 
         # ── signedAttrs [0] IMPLICIT (0xa0) - OPTIONAL ──
         signing_time_from_pkcs7: str | None = None
-        if si_pos < len(si_value) and si_value[si_pos] == 0xa0:
+        if si_pos < len(si_value) and si_value[si_pos] == 0xA0:
             _, _, signed_attrs_value, si_pos = _parse_tag(si_value, si_pos)
             # 解析 signedAttrs 中的 signing-time (OID 1.2.840.113549.1.9.5)
             attr_pos = 0
@@ -319,7 +317,7 @@ def parse_pkcs7_signed_data(raw: bytes) -> list[SignerInfo]:
 
         # ── unsignedAttrs [1] IMPLICIT (0xa1) - OPTIONAL ──
         has_timestamp = False
-        if si_pos < len(si_value) and si_value[si_pos] == 0xa1:
+        if si_pos < len(si_value) and si_value[si_pos] == 0xA1:
             has_timestamp = True
             # unsignedAttrs 中包含 TSA 时间戳令牌，可提取签名时间作为备选
             _, _, unsigned_attrs_value, _ = _parse_tag(si_value, si_pos)
@@ -327,7 +325,9 @@ def parse_pkcs7_signed_data(raw: bytes) -> list[SignerInfo]:
             if not signing_time_from_pkcs7:
                 # 尝试从 unsignedAttrs 中提取 TSA 时间戳的签署时间
                 # 查找 signing-time OID (1.2.840.113549.1.9.5)
-                st_oid_bytes = bytes([0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x05])
+                st_oid_bytes = bytes(
+                    [0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x05]
+                )
                 st_idx = unsigned_attrs_value.find(st_oid_bytes)
                 if st_idx >= 0:
                     # 在 OID 后面应该有 SET → UTCTime/GeneralizedTime
@@ -353,15 +353,21 @@ def parse_pkcs7_signed_data(raw: bytes) -> list[SignerInfo]:
             )
         )
 
-    return signers if signers else [SignerInfo(
-        signer_name=cert_info.get("cn"),
-        cert_serial_hex=cert_info.get("serial_hex"),
-        cert_issuer_str=cert_info.get("issuer_str"),
-        cert_valid_from=cert_info.get("valid_from"),
-        cert_valid_to=cert_info.get("valid_to"),
-        signing_time=None,
-        has_timestamp=False,
-    )]
+    return (
+        signers
+        if signers
+        else [
+            SignerInfo(
+                signer_name=cert_info.get("cn"),
+                cert_serial_hex=cert_info.get("serial_hex"),
+                cert_issuer_str=cert_info.get("issuer_str"),
+                cert_valid_from=cert_info.get("valid_from"),
+                cert_valid_to=cert_info.get("valid_to"),
+                signing_time=None,
+                has_timestamp=False,
+            )
+        ]
+    )
 
 
 def _extract_cert_info(cert_outer_value: bytes) -> dict[str, Any]:
@@ -379,7 +385,7 @@ def _extract_cert_info(cert_outer_value: bytes) -> dict[str, Any]:
 
     pos = 0
     # 跳过 version [0] EXPLICIT (可能不存在)
-    if pos < len(tbs_value) and tbs_value[pos] == 0xa0:
+    if pos < len(tbs_value) and tbs_value[pos] == 0xA0:
         pos = _skip_tlv(tbs_value, pos)
 
     # serialNumber (INTEGER)
@@ -443,8 +449,5 @@ def extract_signing_time_from_pdf_timestamp(
     )
     if match:
         parts = match.groups()
-        return (
-            f"{parts[0]}-{parts[1]}-{parts[2]} "
-            f"{parts[3]}:{parts[4]}:{parts[5]}"
-        )
+        return f"{parts[0]}-{parts[1]}-{parts[2]} {parts[3]}:{parts[4]}:{parts[5]}"
     return pdf_time_str

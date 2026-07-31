@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 from pathlib import Path
@@ -64,5 +64,3 @@ def test_add_path_updates_table(tmp_path: Path) -> None:
     assert window.file_table.item(0, 0).text() == str(pdf_path.resolve())
     assert window.file_count_label.text() == "1 个文件"
     window.close()
-
-

@@ -1,7 +1,8 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 *.pyo
+*.egg-info/
 
 # Virtual environments
 .venv/
@@ -15,18 +16,24 @@ dist/
 # Test and tool caches
 .pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
+.ruff_cache/
+.nox/
 
 # IDE
 .idea/
 .vscode/
 
 # Application outputs
-*_旋转已固化*.pdf
+*_?????*.pdf
 *.tmp
 
 # Logs
 *.log
+
+# Screenshots and local captures
+screenshot/
 
 # Large local PDF fixtures
 testFile/*.pdf

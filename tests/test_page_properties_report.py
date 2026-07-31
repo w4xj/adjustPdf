@@ -61,7 +61,7 @@ def test_rotated_page_is_wrapped_in_red_span() -> None:
 
     assert '<span style="color:#cc2222">' in report
     # 有旋转的页面行在红色 span 内
-    assert '第 1 页' in report
+    assert "第 1 页" in report
     # 无旋转的页面单独存在
     assert "第 2 页" in report
     first_page_end = report.index("第 2 页") if "第 2 页" in report else len(report)
@@ -76,10 +76,12 @@ def test_no_red_span_when_none_rotated() -> None:
 
 
 def test_multiple_files_are_separated() -> None:
-    report = format_multiple_page_property_reports([
-        make_info((270,)),
-        make_info((0,)),
-    ])
+    report = format_multiple_page_property_reports(
+        [
+            make_info((270,)),
+            make_info((0,)),
+        ]
+    )
 
     assert "=" * 70 in report
     assert report.count("文件：测试.pdf") == 2

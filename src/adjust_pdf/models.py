@@ -71,9 +71,7 @@ class DocumentInfo:
 
     @property
     def signed_signatures(self) -> tuple[SignatureInfo, ...]:
-        return tuple(
-            signature for signature in self.signatures if signature.is_signed
-        )
+        return tuple(signature for signature in self.signatures if signature.is_signed)
 
     @property
     def has_digital_signatures(self) -> bool:
@@ -81,15 +79,11 @@ class DocumentInfo:
 
     @property
     def rotated_pages(self) -> tuple[int, ...]:
-        return tuple(
-            page.page_number for page in self.pages if page.rotation != 0
-        )
+        return tuple(page.page_number for page in self.pages if page.rotation != 0)
 
     @property
     def annotation_pages(self) -> tuple[int, ...]:
-        return tuple(
-            page.page_number for page in self.pages if page.has_annotations
-        )
+        return tuple(page.page_number for page in self.pages if page.has_annotations)
 
 
 @dataclass

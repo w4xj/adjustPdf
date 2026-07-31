@@ -1,0 +1,38 @@
+name: Bug report
+description: 报告可复现的问题
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题描述
+      description: 请清楚描述实际结果和期望结果。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 请提供最小复现步骤和命令。
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      placeholder: 例如 0.5.3
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息
+      description: 请填写 Windows 版本、Python 版本或 EXE 信息。
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志或截图
+      description: 请删除敏感信息后再粘贴。

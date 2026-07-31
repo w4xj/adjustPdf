@@ -87,14 +87,8 @@ def main(argv: list[str] | None = None) -> int:
                 info = service.inspect(input_path)
                 safe_print(f"文件：{info.path}")
                 safe_print(f"总页数：{info.page_count}")
-                safe_print(
-                    "旋转页："
-                    + ("、".join(map(str, info.rotated_pages)) or "无")
-                )
-                safe_print(
-                    "批注页："
-                    + ("、".join(map(str, info.annotation_pages)) or "无")
-                )
+                safe_print("旋转页：" + ("、".join(map(str, info.rotated_pages)) or "无"))
+                safe_print("批注页：" + ("、".join(map(str, info.annotation_pages)) or "无"))
                 safe_print(format_signature_report(info))
                 for page in info.pages:
                     safe_print(
@@ -124,10 +118,7 @@ def main(argv: list[str] | None = None) -> int:
                 ),
             )
             safe_print(f"处理完成：{result.output_path}")
-            safe_print(
-                "已处理页面："
-                + ("、".join(map(str, result.processed_pages)) or "无")
-            )
+            safe_print("已处理页面：" + ("、".join(map(str, result.processed_pages)) or "无"))
             for warning in result.warnings:
                 safe_print(f"警告：{warning}")
         except AdjustPdfError as error:

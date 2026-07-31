@@ -4,7 +4,6 @@ from collections import defaultdict
 
 from adjust_pdf.models import DocumentInfo, SignatureInfo
 
-
 RISK_BANNER_TEXT = (
     "重要提示：本工具会重新写入 PDF 页面内容，仅建议用于未加盖电子印章、"
     "未进行数字签名的文件。处理已签章或已签名的 PDF，会导致新生成文件的"
@@ -27,16 +26,12 @@ def format_signing_event(
         f"  证书颁发机构：{first.cert_issuer_str or '未知'}",
         f"  证书使用人：{first.signer_name or '未知'}",
         f"  证书有效期：{first.cert_valid_from or '未知'} 至 {first.cert_valid_to or '未知'}",
-        f"  签名验证结果：验证成功",
+        "  签名验证结果：验证成功",
         f"  是否使用时间戳：{'是' if first.has_timestamp else '否'}",
         f"  包含签名字段：{len(signatures)} 个",
     ]
     for sig in signatures:
-        page_text = (
-            f"第 {sig.page_number} 页"
-            if sig.page_number is not None
-            else "页码未知"
-        )
+        page_text = f"第 {sig.page_number} 页" if sig.page_number is not None else "页码未知"
         lines.append(f"    - 字段：{sig.field_name}，位置：{page_text}")
     return lines
 
@@ -63,9 +58,7 @@ def format_signature_report(info: DocumentInfo) -> str:
         )
         lines.append("")
         for index, (time_label, sigs) in enumerate(events, start=1):
-            lines.extend(
-                format_signing_event(index, time_label, tuple(sigs))
-            )
+            lines.extend(format_signing_event(index, time_label, tuple(sigs)))
             if index < len(events):
                 lines.append("")
 
@@ -78,9 +71,7 @@ def format_signature_report(info: DocumentInfo) -> str:
 def format_simple_signature_detail(signature: SignatureInfo) -> str:
     """格式化单个标准数字签名结构（简略信息）。"""
     page_text = (
-        f"第 {signature.page_number} 页"
-        if signature.page_number is not None
-        else "页码未知"
+        f"第 {signature.page_number} 页" if signature.page_number is not None else "页码未知"
     )
     details = [
         f"字段：{signature.field_name}",
@@ -116,8 +107,10 @@ def format_signed_documents_warning(infos: list[DocumentInfo]) -> str:
             lines.append(f"  签署事件 {index}（{time_label}）：")
             lines.append(f"    签名人：{first.signer_name or '未知'}")
             lines.append(f"    证书序列号：{first.cert_serial_hex or '未知'}")
-            lines.append(f"    证书有效期：{first.cert_valid_from or '未知'} 至 "
-                        f"{first.cert_valid_to or '未知'}")
+            lines.append(
+                f"    证书有效期：{first.cert_valid_from or '未知'} 至 "
+                f"{first.cert_valid_to or '未知'}"
+            )
             lines.append(f"    字段数：{len(sigs)} 个")
         lines.append("")
 

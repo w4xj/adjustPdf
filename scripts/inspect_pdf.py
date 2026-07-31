@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -92,9 +91,7 @@ def print_page_info(reader: PdfReader, page_number: int) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="以适合初学者阅读的方式检查 PDF 结构。"
-    )
+    parser = argparse.ArgumentParser(description="以适合初学者阅读的方式检查 PDF 结构。")
     parser.add_argument("pdf", type=Path, help="要检查的 PDF 文件")
     parser.add_argument(
         "--page",

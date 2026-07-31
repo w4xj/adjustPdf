@@ -4,7 +4,6 @@ import logging
 import os
 from pathlib import Path
 
-
 LOGGER_NAME = "adjust_pdf"
 
 
@@ -26,9 +25,7 @@ def configure_logging() -> Path:
         logger.setLevel(logging.INFO)
         handler = logging.FileHandler(log_path, encoding="utf-8")
         handler.setFormatter(
-            logging.Formatter(
-                "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-            )
+            logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
         )
         logger.addHandler(handler)
 

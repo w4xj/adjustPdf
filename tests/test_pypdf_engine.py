@@ -153,6 +153,7 @@ def test_visual_result_stays_the_same_after_flattening(tmp_path: Path) -> None:
     ) / len(before[2])
     assert average_difference < 1.0
 
+
 def test_real_pdf_fixture_keeps_first_page_visual_and_clears_rotation(
     tmp_path: Path,
 ) -> None:

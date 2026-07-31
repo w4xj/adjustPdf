@@ -1,0 +1,20 @@
+default_language_version:
+  python: python3
+
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Ruff check
+        entry: ruff check --fix
+        language: python
+        additional_dependencies:
+          - ruff>=0.12,<1
+        types: [python]
+      - id: ruff-format
+        name: Ruff format
+        entry: ruff format
+        language: python
+        additional_dependencies:
+          - ruff>=0.12,<1
+        types: [python]

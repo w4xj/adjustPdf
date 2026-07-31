@@ -1,3 +1,3 @@
-"""AdjustPdf 包。"""
+"""PDF??? ??? Python ??"""
 
 __version__ = "0.5.3"

@@ -10,7 +10,6 @@ from pathlib import Path
 import fitz
 from pypdf import PdfReader
 
-
 SELECTED_TEXT = "1,4-6,8"
 SELECTED_PAGES = {1, 4, 5, 6, 8}
 
@@ -93,8 +92,7 @@ def main() -> int:
             print("第一页处理前后的渲染尺寸不同。")
             return 1
         average_difference = sum(
-            abs(left - right)
-            for left, right in zip(before[2], after[2], strict=True)
+            abs(left - right) for left, right in zip(before[2], after[2], strict=True)
         ) / len(before[2])
         if average_difference >= 1.0:
             print(f"第一页视觉差异过大：{average_difference}")

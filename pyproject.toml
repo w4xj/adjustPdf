@@ -4,13 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adjust-pdf"
-version = "0.5.2"
-description = "将 PDF 页面旋转属性固化到页面内容中的 Windows 小工具"
+version = "0.5.3"
+description = "? PDF ??????????????? Windows ???"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [
     { name = "AdjustPdf Contributors" },
+]
+keywords = ["pdf", "rotation", "pypdf", "windows", "pyside6"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business",
 ]
 dependencies = [
     "pypdf>=6,<7",
@@ -21,8 +31,12 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8,<10",
+    "pytest-cov>=6,<8",
     "pyinstaller>=6,<7",
     "pymupdf>=1.24,<2",
+    "ruff>=0.12,<1",
+    "pre-commit>=4,<5",
+    "nox>=2024.4,<2027",
 ]
 
 [project.scripts]
@@ -39,5 +53,29 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+addopts = "-ra --strict-config --strict-markers"
 pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["adjust_pdf"]
+omit = ["*/__main__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [".venv", ".venv-build", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

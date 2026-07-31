@@ -4,7 +4,6 @@ from pathlib import Path
 
 from adjust_pdf.exceptions import InvalidInputError
 
-
 OUTPUT_SUFFIX = "_旋转已固化"
 
 
@@ -28,11 +27,7 @@ def make_output_path(
 ) -> Path:
     """生成不覆盖现有文件的输出路径。"""
     input_path = input_path.resolve()
-    directory = (
-        output_dir.expanduser().resolve()
-        if output_dir is not None
-        else input_path.parent
-    )
+    directory = output_dir.expanduser().resolve() if output_dir is not None else input_path.parent
 
     if directory.exists() and not directory.is_dir():
         raise InvalidInputError(f"输出位置不是文件夹：{directory}")
@@ -42,9 +37,7 @@ def make_output_path(
     number = 2
 
     while candidate.exists() or candidate.resolve() == input_path:
-        candidate = directory / (
-            f"{input_path.stem}{OUTPUT_SUFFIX}_{number}.pdf"
-        )
+        candidate = directory / (f"{input_path.stem}{OUTPUT_SUFFIX}_{number}.pdf")
         number += 1
 
     return candidate

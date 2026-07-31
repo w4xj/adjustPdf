@@ -51,10 +51,12 @@ def test_rotation_report_contains_page_details() -> None:
 
 
 def test_multiple_reports_are_separated() -> None:
-    report = format_multiple_rotation_reports([
-        make_info((270,)),
-        make_info((0,)),
-    ])
+    report = format_multiple_rotation_reports(
+        [
+            make_info((270,)),
+            make_info((0,)),
+        ]
+    )
 
     assert "=" * 70 in report
     assert report.count("文件：测试.pdf") == 2

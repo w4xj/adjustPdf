@@ -1,3 +1,3 @@
-pypdf==6.14.2
-PySide6>=6.8,<7
-asn1crypto>=1.5,<2
+# Runtime installation is defined by pyproject.toml.
+# This file keeps the historical pip workflow while avoiding duplicate dependencies.
+-e .

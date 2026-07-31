@@ -15,7 +15,7 @@ VSVersionInfo(
         '080404B0',
         [
           StringStruct('CompanyName', 'AdjustPdf Contributors'),
-          StringStruct('FileDescription', 'PDF·如一 — PDF 页面旋转消除与签名检测工具'),
+          StringStruct('FileDescription', 'PDF·如一 - PDF 页面旋转消除与签名检测工具'),
           StringStruct('FileVersion', '0.5.3'),
           StringStruct('InternalName', 'PdfRuYi'),
           StringStruct('OriginalFilename', 'PDF-如一_v0.5.3.exe'),

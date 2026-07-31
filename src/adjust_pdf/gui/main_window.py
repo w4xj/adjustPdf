@@ -1,4 +1,4 @@
-﻿"""PySide6 图形界面。"""
+"""PySide6 图形界面。"""
 
 from __future__ import annotations
 
@@ -10,7 +10,17 @@ import uuid
 from pathlib import Path
 
 from PySide6.QtCore import QSize, Qt, QTimer
-from PySide6.QtGui import QColor, QCloseEvent, QDragEnterEvent, QDropEvent, QIcon, QLinearGradient, QPainter, QPalette, QPixmap
+from PySide6.QtGui import (
+    QCloseEvent,
+    QColor,
+    QDragEnterEvent,
+    QDropEvent,
+    QIcon,
+    QLinearGradient,
+    QPainter,
+    QPalette,
+    QPixmap,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -38,13 +48,12 @@ from PySide6.QtWidgets import (
 from adjust_pdf import __version__
 from adjust_pdf.exceptions import AdjustPdfError
 from adjust_pdf.models import DocumentInfo, PageSelectionMode, ProcessOptions, ProcessResult
-from adjust_pdf.page_ranges import parse_page_numbers
 from adjust_pdf.page_properties_report import format_multiple_page_property_reports
+from adjust_pdf.page_ranges import parse_page_numbers
 from adjust_pdf.resources import resource_path
 from adjust_pdf.rotation_report import format_multiple_rotation_reports, format_rotation_summary
 from adjust_pdf.service import PdfProcessingService
 from adjust_pdf.signature_report import RISK_BANNER_TEXT, format_signed_documents_warning
-
 
 MODE_LABELS = {
     "仅处理第一页": PageSelectionMode.FIRST,
@@ -532,7 +541,9 @@ class MainWindow(QMainWindow):
         self.file_count_label.setText(f"{len(self.file_items)} 个文件")
 
     def _choose_files(self) -> None:
-        selected, _ = QFileDialog.getOpenFileNames(self, "选择需要固化旋转的 PDF", "", "PDF 文件 (*.pdf);;所有文件 (*.*)")
+        selected, _ = QFileDialog.getOpenFileNames(
+            self, "选择需要固化旋转的 PDF", "", "PDF 文件 (*.pdf);;所有文件 (*.*)"
+        )
         for file_name in selected:
             self.add_path(Path(file_name))
 
@@ -667,14 +678,18 @@ class MainWindow(QMainWindow):
             except Exception as error:
                 self.logger.exception("签名预检时发生未预期错误：%s", path)
                 failures.append((item_id, path, f"发生未预期错误：{error}"))
-        self.events.put(("preflight_done", checked, failures, tasks, output_directory, mode, selected_pages))
+        self.events.put(
+            ("preflight_done", checked, failures, tasks, output_directory, mode, selected_pages)
+        )
 
     def _process_worker(self, tasks, output_directory, mode, selected_pages) -> None:
         options = ProcessOptions(page_mode=mode, selected_pages=selected_pages)
         for index, (item_id, path) in enumerate(tasks, start=1):
             self.events.put(("status", item_id, "处理中", index, len(tasks)))
             try:
-                result = self.service.process_file(input_path=path, options=options, output_dir=output_directory)
+                result = self.service.process_file(
+                    input_path=path, options=options, output_dir=output_directory
+                )
                 self.events.put(("success", item_id, path, result))
             except AdjustPdfError as error:
                 self.events.put(("failure", item_id, path, str(error)))
@@ -694,7 +709,9 @@ class MainWindow(QMainWindow):
                     self._set_status(f"正在执行签名预检 {index}/{total}……")
                 elif kind == "preflight_done":
                     _, checked, failures, tasks, output_directory, mode, selected_pages = event
-                    self._handle_signature_preflight(checked, failures, tasks, output_directory, mode, selected_pages)
+                    self._handle_signature_preflight(
+                        checked, failures, tasks, output_directory, mode, selected_pages
+                    )
                 elif kind == "inspect_status":
                     _, item_id, index, total = event
                     self._set_table_values(item_id, status="检查中")
@@ -702,7 +719,11 @@ class MainWindow(QMainWindow):
                 elif kind == "inspect_success":
                     _, item_id, _path, info = event
                     self.inspection_results.append(info)
-                    self._set_table_values(item_id, status=f"检查完成（{len(info.rotated_pages)} 页）", output=format_rotation_summary(info))
+                    self._set_table_values(
+                        item_id,
+                        status=f"检查完成（{len(info.rotated_pages)} 页）",
+                        output=format_rotation_summary(info),
+                    )
                 elif kind == "inspect_failure":
                     _, item_id, path, error = event
                     self.inspection_failures.append((path, error))
@@ -730,7 +751,11 @@ class MainWindow(QMainWindow):
                 elif kind == "success":
                     _, item_id, _path, result = event
                     self.successful_results.append(result)
-                    self._set_table_values(item_id, status="成功（有警告）" if result.warnings else "成功", output=str(result.output_path))
+                    self._set_table_values(
+                        item_id,
+                        status="成功（有警告）" if result.warnings else "成功",
+                        output=str(result.output_path),
+                    )
                 elif kind == "failure":
                     _, item_id, path, error = event
                     self.failed_results.append((path, error))
@@ -740,7 +765,9 @@ class MainWindow(QMainWindow):
         except queue.Empty:
             return
 
-    def _handle_signature_preflight(self, checked, failures, tasks, output_directory, mode, selected_pages) -> None:
+    def _handle_signature_preflight(
+        self, checked, failures, tasks, output_directory, mode, selected_pages
+    ) -> None:
         if failures:
             for item_id, _path, error in failures:
                 self._set_table_values(item_id, status="签名预检失败", output=error)
@@ -749,11 +776,17 @@ class MainWindow(QMainWindow):
             self._set_controls_enabled(True)
             self._set_status("签名预检失败，未开始处理")
             details = "\n".join(f"{path.name}：{error}" for _, path, error in failures)
-            QMessageBox.warning(self, "无法安全检查文件", "签名预检没有完成，因此没有处理任何文件。\n\n" + details)
+            QMessageBox.warning(
+                self, "无法安全检查文件", "签名预检没有完成，因此没有处理任何文件。\n\n" + details
+            )
             return
 
         for item_id, _path, info in checked:
-            status = f"检测到签名（{len(info.signed_signatures)} 个）" if info.has_digital_signatures else "预检通过"
+            status = (
+                f"检测到签名（{len(info.signed_signatures)} 个）"
+                if info.has_digital_signatures
+                else "预检通过"
+            )
             self._set_table_values(item_id, status=status)
 
         signed_infos = [info for _, _, info in checked if info.has_digital_signatures]
@@ -768,7 +801,11 @@ class MainWindow(QMainWindow):
             return
 
         self._set_status(f"正在处理 0/{len(tasks)}……")
-        threading.Thread(target=self._process_worker, args=(tasks, output_directory, mode, selected_pages), daemon=True).start()
+        threading.Thread(
+            target=self._process_worker,
+            args=(tasks, output_directory, mode, selected_pages),
+            daemon=True,
+        ).start()
 
     def _confirm_signed_files(self, infos: list[DocumentInfo]) -> bool:
         dialog = QDialog(self)
@@ -795,7 +832,10 @@ class MainWindow(QMainWindow):
         buttons.addWidget(continue_button)
         buttons.addWidget(cancel_button)
         layout.addLayout(buttons)
-        dialog.setStyleSheet(self.styleSheet() + "QLabel#dialogWarning{background:#a4111c;color:white;padding:10px;border-radius:7px;font-weight:700;} QPushButton#dangerButton{background:#8d1720;color:white;border-color:#ef6971;} QTextEdit{background:#f7f2e8;color:#17243a;border:1px solid #d89a4a;padding:8px;}")
+        dialog.setStyleSheet(
+            self.styleSheet()
+            + "QLabel#dialogWarning{background:#a4111c;color:white;padding:10px;border-radius:7px;font-weight:700;} QPushButton#dangerButton{background:#8d1720;color:white;border-color:#ef6971;} QTextEdit{background:#f7f2e8;color:#17243a;border:1px solid #d89a4a;padding:8px;}"
+        )
         return dialog.exec() == QDialog.DialogCode.Accepted
 
     def _row_for_id(self, item_id: str) -> int | None:
@@ -805,7 +845,9 @@ class MainWindow(QMainWindow):
                 return row
         return None
 
-    def _set_table_values(self, item_id: str, *, status: str | None = None, output: str | None = None) -> None:
+    def _set_table_values(
+        self, item_id: str, *, status: str | None = None, output: str | None = None
+    ) -> None:
         row = self._row_for_id(item_id)
         if row is None:
             return
@@ -821,7 +863,9 @@ class MainWindow(QMainWindow):
         success_count = len(self.inspection_results)
         failure_count = len(self.inspection_failures)
         rotated_count = sum(len(info.rotated_pages) for info in self.inspection_results)
-        self._set_status(f"检查结束：成功 {success_count} 个，失败 {failure_count} 个，发现 {rotated_count} 个旋转页面")
+        self._set_status(
+            f"检查结束：成功 {success_count} 个，失败 {failure_count} 个，发现 {rotated_count} 个旋转页面"
+        )
         parts: list[str] = []
         if self.inspection_results:
             parts.append(format_multiple_rotation_reports(self.inspection_results))
@@ -847,7 +891,10 @@ class MainWindow(QMainWindow):
         button_row.addWidget(close_button)
         layout.addWidget(text, 1)
         layout.addLayout(button_row)
-        dialog.setStyleSheet(self.styleSheet() + "QTextEdit{background:#f7f2e8;color:#17243a;border:1px solid #d89a4a;padding:8px;}")
+        dialog.setStyleSheet(
+            self.styleSheet()
+            + "QTextEdit{background:#f7f2e8;color:#17243a;border:1px solid #d89a4a;padding:8px;}"
+        )
         dialog.exec()
 
     def _finish_page_props(self) -> None:
@@ -862,6 +909,7 @@ class MainWindow(QMainWindow):
             parts.append(format_multiple_page_property_reports(self.page_props_results))
         if self.page_props_failures:
             from html import escape
+
             fail_lines = ["<br>", escape("检查失败：")]
             fail_lines.extend(
                 escape(f"{path.name}：{error}") for path, error in self.page_props_failures
@@ -878,7 +926,9 @@ class MainWindow(QMainWindow):
         text = QTextEdit()
         text.setReadOnly(True)
         text.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
-        text.setHtml(f"<pre style='font-family:Consolas,Courier New,monospace;font-size:13px;margin:0'>{report}</pre>")
+        text.setHtml(
+            f"<pre style='font-family:Consolas,Courier New,monospace;font-size:13px;margin:0'>{report}</pre>"
+        )
         close_button = QPushButton("关闭")
         close_button.clicked.connect(dialog.accept)
         button_row = QHBoxLayout()
@@ -886,7 +936,10 @@ class MainWindow(QMainWindow):
         button_row.addWidget(close_button)
         layout.addWidget(text, 1)
         layout.addLayout(button_row)
-        dialog.setStyleSheet(self.styleSheet() + "QTextEdit{background:#f7f2e8;color:#17243a;border:1px solid #d89a4a;padding:8px;}")
+        dialog.setStyleSheet(
+            self.styleSheet()
+            + "QTextEdit{background:#f7f2e8;color:#17243a;border:1px solid #d89a4a;padding:8px;}"
+        )
         dialog.exec()
 
     def _finish_processing(self) -> None:
@@ -896,8 +949,14 @@ class MainWindow(QMainWindow):
         success_count = len(self.successful_results)
         failure_count = len(self.failed_results)
         warning_count = sum(len(result.warnings) for result in self.successful_results)
-        self._set_status(f"处理结束：成功 {success_count} 个，失败 {failure_count} 个，警告 {warning_count} 条")
-        details = [f"成功：{success_count} 个", f"失败：{failure_count} 个", f"警告：{warning_count} 条"]
+        self._set_status(
+            f"处理结束：成功 {success_count} 个，失败 {failure_count} 个，警告 {warning_count} 条"
+        )
+        details = [
+            f"成功：{success_count} 个",
+            f"失败：{failure_count} 个",
+            f"警告：{warning_count} 条",
+        ]
         if self.successful_results:
             details.append("\n输出文件：")
             details.extend(str(result.output_path) for result in self.successful_results)
@@ -931,7 +990,9 @@ class MainWindow(QMainWindow):
         self.progress.setValue(0)
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:  # noqa: N802
-        if event.mimeData().hasUrls() and any(url.toLocalFile().lower().endswith(".pdf") for url in event.mimeData().urls()):
+        if event.mimeData().hasUrls() and any(
+            url.toLocalFile().lower().endswith(".pdf") for url in event.mimeData().urls()
+        ):
             event.acceptProposedAction()
 
     def dropEvent(self, event: QDropEvent) -> None:  # noqa: N802
@@ -941,7 +1002,11 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         if self.processing:
-            QMessageBox.warning(self, "正在处理", "操作仍在进行中。为避免中断文件读取或写入，请等待完成后再关闭程序。")
+            QMessageBox.warning(
+                self,
+                "正在处理",
+                "操作仍在进行中。为避免中断文件读取或写入，请等待完成后再关闭程序。",
+            )
             event.ignore()
             return
         event.accept()
@@ -957,10 +1022,3 @@ def launch_gui(initial_files: list[Path] | None = None, log_path: Path | None = 
     window = MainWindow(initial_files=initial_files, log_path=log_path)
     window.show()
     app.exec()
-
-
-
-
-
-
-

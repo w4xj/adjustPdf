@@ -8,17 +8,12 @@ def format_rotation_summary(info: DocumentInfo, max_pages: int = 8) -> str:
     """生成适合显示在文件列表中的简短结果。"""
     rotated = [page for page in info.pages if page.rotation != 0]
     signature_suffix = (
-        f"；检测到数字签名：{len(info.signed_signatures)} 个"
-        if info.has_digital_signatures
-        else ""
+        f"；检测到数字签名：{len(info.signed_signatures)} 个" if info.has_digital_signatures else ""
     )
     if not rotated:
         return "未发现页面旋转属性" + signature_suffix
 
-    preview = "、".join(
-        f"{page.page_number}({page.rotation}°)"
-        for page in rotated[:max_pages]
-    )
+    preview = "、".join(f"{page.page_number}({page.rotation}°)" for page in rotated[:max_pages])
     if len(rotated) > max_pages:
         preview += f"……共 {len(rotated)} 页"
     return f"旋转页：{preview}" + signature_suffix
@@ -50,6 +45,4 @@ def format_rotation_report(info: DocumentInfo) -> str:
 
 def format_multiple_rotation_reports(infos: list[DocumentInfo]) -> str:
     """生成多个 PDF 的完整检查报告。"""
-    return ("\n\n" + "=" * 70 + "\n\n").join(
-        format_rotation_report(info) for info in infos
-    )
+    return ("\n\n" + "=" * 70 + "\n\n").join(format_rotation_report(info) for info in infos)

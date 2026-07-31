@@ -24,8 +24,8 @@ from adjust_pdf.models import (
     SignatureInfo,
 )
 from adjust_pdf.signature_parser import (
-    parse_pkcs7_signed_data,
     extract_signing_time_from_pdf_timestamp,
+    parse_pkcs7_signed_data,
 )
 
 
@@ -109,9 +109,9 @@ class PypdfEngine:
         field = field_reference.get_object()
         field_type = field.get("/FT", inherited_field_type)
         local_name = cls._text_value(field.get("/T"))
-        field_name = ".".join(
-            part for part in (parent_name, local_name) if part
-        ) or "未命名签名字段"
+        field_name = (
+            ".".join(part for part in (parent_name, local_name) if part) or "未命名签名字段"
+        )
 
         if field_type == "/Sig":
             cls._append_signature_info(
@@ -177,7 +177,11 @@ class PypdfEngine:
         if value_id not in pkcs7_cache:
             pkcs7_info: dict[str, object] = {}
             try:
-                raw = contents.original_bytes if hasattr(contents, "original_bytes") else bytes(contents)  # type: ignore[arg-type]
+                raw = (
+                    contents.original_bytes
+                    if hasattr(contents, "original_bytes")
+                    else bytes(contents)
+                )  # type: ignore[arg-type]
                 raw = raw.rstrip(b"\x00")
                 signers = parse_pkcs7_signed_data(raw)
                 if signers:
@@ -291,8 +295,7 @@ class PypdfEngine:
             ):
                 if self._has_annotations(source_page):
                     result.warnings.append(
-                        f"第 {page_number} 页包含链接、批注或表单区域，"
-                        "请在处理后检查其点击位置。"
+                        f"第 {page_number} 页包含链接、批注或表单区域，请在处理后检查其点击位置。"
                     )
                 output_page.transfer_rotation_to_content()
                 result.processed_pages.append(page_number)
@@ -324,13 +327,9 @@ class PypdfEngine:
         except OutputWriteError:
             raise
         except OSError as error:
-            raise OutputWriteError(
-                f"无法写入输出文件：{output_path}。原因：{error}"
-            ) from error
+            raise OutputWriteError(f"无法写入输出文件：{output_path}。原因：{error}") from error
         except Exception as error:
-            raise OutputWriteError(
-                f"生成的 PDF 未通过完整性检查：{error}"
-            ) from error
+            raise OutputWriteError(f"生成的 PDF 未通过完整性检查：{error}") from error
         finally:
             if temporary_path is not None:
                 temporary_path.unlink(missing_ok=True)
@@ -371,21 +370,15 @@ class PypdfEngine:
                 try:
                     decrypted = reader.decrypt("")
                 except Exception as error:
-                    raise EncryptedPdfError(
-                        f"PDF 已加密，需要密码：{input_path.name}"
-                    ) from error
+                    raise EncryptedPdfError(f"PDF 已加密，需要密码：{input_path.name}") from error
                 if not decrypted:
-                    raise EncryptedPdfError(
-                        f"PDF 已加密，需要密码：{input_path.name}"
-                    )
+                    raise EncryptedPdfError(f"PDF 已加密，需要密码：{input_path.name}")
             _ = len(reader.pages)
             return reader
         except EncryptedPdfError:
             raise
         except (PdfReadError, ValueError, OSError) as error:
-            raise InvalidPdfError(
-                f"无法读取 PDF：{input_path.name}。原因：{error}"
-            ) from error
+            raise InvalidPdfError(f"无法读取 PDF：{input_path.name}。原因：{error}") from error
 
     @staticmethod
     def _validate_output(
@@ -396,15 +389,11 @@ class PypdfEngine:
         try:
             reader = PdfReader(str(output_path), strict=False)
             if len(reader.pages) != expected_page_count:
-                raise OutputWriteError(
-                    "输出 PDF 的页数与输入文件不一致。"
-                )
+                raise OutputWriteError("输出 PDF 的页数与输入文件不一致。")
             for page_number in processed_pages:
                 rotation = int(reader.pages[page_number - 1].rotation or 0)
                 if rotation != 0:
-                    raise OutputWriteError(
-                        f"第 {page_number} 页的旋转属性没有成功归零。"
-                    )
+                    raise OutputWriteError(f"第 {page_number} 页的旋转属性没有成功归零。")
         except OutputWriteError:
             raise
         except Exception as error:

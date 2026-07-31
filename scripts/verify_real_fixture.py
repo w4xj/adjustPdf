@@ -96,17 +96,13 @@ def main() -> int:
             return 1
 
         average_difference = sum(
-            abs(left - right)
-            for left, right in zip(before[2], after[2], strict=True)
+            abs(left - right) for left, right in zip(before[2], after[2], strict=True)
         ) / len(before[2])
         if average_difference >= 1.0:
             print(f"处理前后视觉差异过大：{average_difference}")
             return 1
 
-    print(
-        "真实 PDF 回归测试通过："
-        "第一页显示尺寸保持不变，Rotate=270 已固化为 Rotate=0。"
-    )
+    print("真实 PDF 回归测试通过：第一页显示尺寸保持不变，Rotate=270 已固化为 Rotate=0。")
     return 0
 
 
