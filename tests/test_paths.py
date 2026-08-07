@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from adjust_pdf.exceptions import InvalidInputError
-from adjust_pdf.paths import make_output_path, validate_input_path
+from adjust_pdf.paths import make_output_path, make_repair_output_path, validate_input_path
 
 
 def test_validate_input_path_accepts_chinese_pdf(tmp_path: Path) -> None:
@@ -32,4 +32,16 @@ def test_make_output_path_avoids_overwrite(tmp_path: Path) -> None:
     output_path = make_output_path(input_path)
 
     assert output_path.name == "聊天记录_旋转已固化_2.pdf"
+    assert first_output.read_bytes() == b"existing"
+
+
+def test_make_repair_output_path_uses_distinct_suffix(tmp_path: Path) -> None:
+    input_path = tmp_path / "source.pdf"
+    input_path.write_bytes(b"input")
+    first_output = tmp_path / "source_结构已修复.pdf"
+    first_output.write_bytes(b"existing")
+
+    output_path = make_repair_output_path(input_path)
+
+    assert output_path.name == "source_结构已修复_2.pdf"
     assert first_output.read_bytes() == b"existing"

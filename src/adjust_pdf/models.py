@@ -99,3 +99,13 @@ class ProcessResult:
     @property
     def processed_count(self) -> int:
         return len(self.processed_pages)
+
+
+@dataclass
+class StructureRepairResult:
+    """PDF 结构修复操作的结果。"""
+
+    input_path: Path
+    output_path: Path
+    page_count: int
+    warnings: list[str] = field(default_factory=list)

@@ -17,5 +17,9 @@ class EncryptedPdfError(AdjustPdfError):
     """PDF 需要密码。"""
 
 
+class SignedPdfError(AdjustPdfError):
+    """PDF 包含已写入的数字签名，禁止执行要求无签章的操作。"""
+
+
 class OutputWriteError(AdjustPdfError):
     """输出文件无法写入。"""

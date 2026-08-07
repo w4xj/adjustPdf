@@ -3,7 +3,12 @@
 from pathlib import Path
 from typing import Protocol
 
-from adjust_pdf.models import DocumentInfo, ProcessOptions, ProcessResult
+from adjust_pdf.models import (
+    DocumentInfo,
+    ProcessOptions,
+    ProcessResult,
+    StructureRepairResult,
+)
 
 
 class PdfEngine(Protocol):
@@ -20,4 +25,12 @@ class PdfEngine(Protocol):
         options: ProcessOptions,
     ) -> ProcessResult:
         """处理 PDF 并生成新文件。"""
+        ...
+
+    def repair_structure(
+        self,
+        input_path: Path,
+        output_path: Path,
+    ) -> StructureRepairResult:
+        """在确认无签章后重建 PDF 结构并生成新文件。"""
         ...

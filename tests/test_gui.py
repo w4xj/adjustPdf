@@ -31,6 +31,8 @@ def test_pyside_skin_loads_and_defaults_to_first_page() -> None:
     assert "QHeaderView::section" in window.styleSheet()
     assert "color: #ffffff" in window.styleSheet()
     assert window.file_table.showGrid()
+    assert window.repair_button.text() == "修复 PDF 结构"
+    assert window.repair_button in window._controls
     assert window.findChild(object, "headerCard") is not None
     assert window.findChild(object, "fileCard") is not None
     assert window.findChild(object, "optionsCard") is not None

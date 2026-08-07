@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import tempfile
 from pathlib import Path
@@ -9,11 +10,13 @@ from pathlib import Path
 from pypdf import PdfReader, PdfWriter
 from pypdf.errors import PdfReadError
 
+from adjust_pdf.engines.compatible_reader import CompatiblePdfReader
 from adjust_pdf.exceptions import (
     EncryptedPdfError,
     InvalidInputError,
     InvalidPdfError,
     OutputWriteError,
+    SignedPdfError,
 )
 from adjust_pdf.models import (
     DocumentInfo,
@@ -22,6 +25,7 @@ from adjust_pdf.models import (
     ProcessOptions,
     ProcessResult,
     SignatureInfo,
+    StructureRepairResult,
 )
 from adjust_pdf.signature_parser import (
     extract_signing_time_from_pdf_timestamp,
@@ -33,7 +37,14 @@ class PypdfEngine:
     """使用 pypdf 检查并固化 PDF 页面旋转。"""
 
     def inspect(self, input_path: Path) -> DocumentInfo:
-        reader = self._open_reader(input_path)
+        reader = self._open_reader(input_path, allow_compatibility_repair=True)
+        return self._document_info_from_reader(input_path, reader)
+
+    def _document_info_from_reader(
+        self,
+        input_path: Path,
+        reader: PdfReader,
+    ) -> DocumentInfo:
         pages = tuple(
             PageInfo(
                 page_number=index,
@@ -44,12 +55,69 @@ class PypdfEngine:
             )
             for index, page in enumerate(reader.pages, start=1)
         )
+        signatures = (
+            self._inspect_compatible_signatures(reader)
+            if isinstance(reader, CompatiblePdfReader) and reader.compatibility_repair_applied
+            else self._inspect_signatures(reader)
+        )
         return DocumentInfo(
             path=input_path,
             page_count=len(pages),
             pages=pages,
-            signatures=self._inspect_signatures(reader),
+            signatures=signatures,
         )
+
+    @classmethod
+    def _inspect_compatible_signatures(
+        cls,
+        reader: CompatiblePdfReader,
+    ) -> tuple[SignatureInfo, ...]:
+        """同时检查可访问字段和 xref 物理候选，避免异常结构漏报签章。"""
+        try:
+            standard = cls._inspect_signatures(reader)
+        except Exception:
+            standard = ()
+        recovered = cls._inspect_recovered_signatures(reader)
+
+        combined = [*standard, *recovered]
+        if any(signature.is_signed for signature in combined):
+            combined = [signature for signature in combined if signature.is_signed]
+
+        results: list[SignatureInfo] = []
+        seen: set[tuple[object, ...]] = set()
+        for signature in combined:
+            key = (
+                signature.field_name,
+                signature.filter_name,
+                signature.subfilter,
+                signature.signing_time,
+                signature.contents_length,
+                signature.cert_serial_hex,
+            )
+            if key not in seen:
+                seen.add(key)
+                results.append(signature)
+        return tuple(results)
+
+    @classmethod
+    def _inspect_recovered_signatures(
+        cls,
+        reader: CompatiblePdfReader,
+    ) -> tuple[SignatureInfo, ...]:
+        """从歧义 xref 的物理候选对象中保守识别数字签名字典。"""
+        results: list[SignatureInfo] = []
+        pkcs7_cache: dict[int, dict[str, object]] = {}
+        for _, value_object in reader.iter_candidate_objects_of_type(b"Sig"):
+            field_name = cls._text_value(value_object.get("/Name")) or "兼容模式签名"
+            cls._append_signature_info(
+                field_name=field_name,
+                field_object=None,
+                value_reference=value_object,
+                page_numbers={},
+                results=results,
+                pkcs7_cache=pkcs7_cache,
+            )
+        return tuple(results)
 
     @classmethod
     def _inspect_signatures(cls, reader: PdfReader) -> tuple[SignatureInfo, ...]:
@@ -336,6 +404,75 @@ class PypdfEngine:
 
         return result
 
+    def repair_structure(
+        self,
+        input_path: Path,
+        output_path: Path,
+    ) -> StructureRepairResult:
+        """对无签章的异常 PDF 重建 xref 和对象引用。"""
+        if output_path.exists():
+            raise OutputWriteError(f"为避免覆盖文件，输出文件必须不存在：{output_path}")
+        if output_path.resolve() == input_path.resolve():
+            raise OutputWriteError("输出文件不能与输入文件相同。")
+
+        reader = self._open_reader(input_path, allow_compatibility_repair=True)
+        if not isinstance(reader, CompatiblePdfReader) or not reader.compatibility_repair_applied:
+            raise InvalidInputError(f"未检测到需要修复的 PDF 交叉引用异常：{input_path.name}")
+
+        info = self._document_info_from_reader(input_path, reader)
+        if info.has_digital_signatures:
+            raise SignedPdfError(
+                f"禁止修复：{input_path.name} 检测到 "
+                f"{len(info.signed_signatures)} 个已写入的数字签名或电子签章。"
+            )
+        stamp_pages = self._stamp_annotation_pages(reader)
+        if stamp_pages:
+            page_text = "、".join(str(page_number) for page_number in stamp_pages)
+            raise SignedPdfError(
+                f"禁止修复：{input_path.name} 的第 {page_text} 页检测到 Stamp 印章批注。"
+            )
+
+        source_fingerprints = tuple(self._page_fingerprint(page) for page in reader.pages)
+        writer = PdfWriter(clone_from=reader)
+        result = StructureRepairResult(
+            input_path=input_path,
+            output_path=output_path,
+            page_count=info.page_count,
+        )
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        temporary_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w+b",
+                prefix=f".{output_path.stem}.",
+                suffix=".tmp",
+                dir=output_path.parent,
+                delete=False,
+            ) as temporary_file:
+                temporary_path = Path(temporary_file.name)
+                writer.write(temporary_file)
+                temporary_file.flush()
+                os.fsync(temporary_file.fileno())
+
+            self._validate_repaired_output(
+                temporary_path,
+                source_fingerprints=source_fingerprints,
+            )
+            os.replace(temporary_path, output_path)
+            temporary_path = None
+        except (OutputWriteError, SignedPdfError):
+            raise
+        except OSError as error:
+            raise OutputWriteError(f"无法写入结构修复文件：{output_path}。原因：{error}") from error
+        except Exception as error:
+            raise OutputWriteError(f"PDF 结构修复失败：{error}") from error
+        finally:
+            if temporary_path is not None:
+                temporary_path.unlink(missing_ok=True)
+
+        return result
+
     @staticmethod
     def _should_process(
         page_number: int,
@@ -363,9 +500,69 @@ class PypdfEngine:
             return True
 
     @staticmethod
-    def _open_reader(input_path: Path) -> PdfReader:
+    def _stamp_annotation_pages(reader: PdfReader) -> tuple[int, ...]:
+        """返回包含 /Subtype /Stamp 印章批注的页码；无法安全解析时拒绝修复。"""
+        pages: list[int] = []
         try:
-            reader = PdfReader(str(input_path), strict=False)
+            for page_number, page in enumerate(reader.pages, start=1):
+                annotations = page.get("/Annots")
+                if annotations is None:
+                    continue
+                for annotation_reference in annotations.get_object():
+                    annotation = annotation_reference.get_object()
+                    if annotation.get("/Subtype") == "/Stamp":
+                        pages.append(page_number)
+                        break
+        except Exception as error:
+            raise SignedPdfError("禁止修复：无法完整检查页面批注中是否存在电子印章。") from error
+        return tuple(pages)
+
+    @classmethod
+    def _page_fingerprint(cls, page: object) -> tuple[object, ...]:
+        """记录与页面显示内容相关的稳定指纹。"""
+        media_box = page.mediabox  # type: ignore[attr-defined]
+        crop_box = page.cropbox  # type: ignore[attr-defined]
+        contents = page.get_contents()  # type: ignore[attr-defined]
+        content_data = b"" if contents is None else contents.get_data()
+        return (
+            tuple(float(value) for value in media_box),
+            tuple(float(value) for value in crop_box),
+            int(page.rotation or 0),  # type: ignore[attr-defined]
+            hashlib.sha256(content_data).digest(),
+            cls._has_annotations(page),
+        )
+
+    @classmethod
+    def _validate_repaired_output(
+        cls,
+        output_path: Path,
+        source_fingerprints: tuple[tuple[object, ...], ...],
+    ) -> None:
+        """确认修复文件可被标准 pypdf 读取，且页面内容指纹不变。"""
+        try:
+            reader = PdfReader(str(output_path), strict=False)
+            if len(reader.pages) != len(source_fingerprints):
+                raise OutputWriteError("修复后 PDF 的页数与原文件不一致。")
+            output_fingerprints = tuple(cls._page_fingerprint(page) for page in reader.pages)
+            if output_fingerprints != source_fingerprints:
+                raise OutputWriteError("修复后 PDF 的页面尺寸、旋转、内容流或批注状态发生变化。")
+        except OutputWriteError:
+            raise
+        except Exception as error:
+            raise OutputWriteError(f"无法重新读取结构修复后的 PDF：{error}") from error
+
+    @staticmethod
+    def _open_reader(
+        input_path: Path,
+        allow_compatibility_repair: bool = False,
+    ) -> PdfReader:
+        try:
+            try:
+                reader = PdfReader(str(input_path), strict=False)
+            except PdfReadError as error:
+                if not allow_compatibility_repair or str(error) != "Could not read Boolean object":
+                    raise
+                reader = CompatiblePdfReader(str(input_path), strict=False)
             if reader.is_encrypted:
                 try:
                     decrypted = reader.decrypt("")

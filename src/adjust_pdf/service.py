@@ -5,8 +5,8 @@ from pathlib import Path
 from adjust_pdf.engines.base import PdfEngine
 from adjust_pdf.engines.pypdf_engine import PypdfEngine
 from adjust_pdf.logging_config import get_logger
-from adjust_pdf.models import DocumentInfo, ProcessOptions, ProcessResult
-from adjust_pdf.paths import make_output_path, validate_input_path
+from adjust_pdf.models import DocumentInfo, ProcessOptions, ProcessResult, StructureRepairResult
+from adjust_pdf.paths import make_output_path, make_repair_output_path, validate_input_path
 
 
 class PdfProcessingService:
@@ -43,5 +43,22 @@ class PdfProcessingService:
             result.output_path,
             result.processed_pages,
             len(result.warnings),
+        )
+        return result
+
+    def repair_structure(
+        self,
+        input_path: Path,
+        output_dir: Path | None = None,
+    ) -> StructureRepairResult:
+        """对无签章的异常 PDF 重建交叉引用和对象结构。"""
+        path = validate_input_path(input_path)
+        output_path = make_repair_output_path(path, output_dir)
+        self.logger.info("开始修复 PDF 结构：input=%s output=%s", path, output_path)
+        result = self.engine.repair_structure(path, output_path)
+        self.logger.info(
+            "PDF 结构修复完成：output=%s pages=%s",
+            result.output_path,
+            result.page_count,
         )
         return result

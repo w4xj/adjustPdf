@@ -47,7 +47,13 @@ from PySide6.QtWidgets import (
 
 from adjust_pdf import __version__
 from adjust_pdf.exceptions import AdjustPdfError
-from adjust_pdf.models import DocumentInfo, PageSelectionMode, ProcessOptions, ProcessResult
+from adjust_pdf.models import (
+    DocumentInfo,
+    PageSelectionMode,
+    ProcessOptions,
+    ProcessResult,
+    StructureRepairResult,
+)
 from adjust_pdf.page_properties_report import format_multiple_page_property_reports
 from adjust_pdf.page_ranges import parse_page_numbers
 from adjust_pdf.resources import resource_path
@@ -120,6 +126,8 @@ class MainWindow(QMainWindow):
         self.inspection_failures: list[tuple[Path, str]] = []
         self.page_props_results: list[DocumentInfo] = []
         self.page_props_failures: list[tuple[Path, str]] = []
+        self.repair_results: list[StructureRepairResult] = []
+        self.repair_failures: list[tuple[Path, str]] = []
 
         self._configure_window()
         self._build_widgets()
@@ -238,10 +246,17 @@ class MainWindow(QMainWindow):
         self.page_props_button = QPushButton("检查页面属性")
         self.page_props_button.setObjectName("secondaryButton")
         self.page_props_button.clicked.connect(self._start_page_props)
+        self.repair_button = QPushButton("修复 PDF 结构")
+        self.repair_button.setObjectName("secondaryButton")
+        self.repair_button.setToolTip(
+            "仅修复交叉引用异常且未检测到数字签章的 PDF，原文件不会被覆盖"
+        )
+        self.repair_button.clicked.connect(self._start_structure_repair)
         button_row.addWidget(self.add_button)
         button_row.addWidget(self.remove_button)
         button_row.addWidget(self.clear_button)
         button_row.addStretch(1)
+        button_row.addWidget(self.repair_button)
         button_row.addWidget(self.page_props_button)
         button_row.addWidget(self.inspect_button)
         file_layout.addLayout(button_row)
@@ -324,6 +339,7 @@ class MainWindow(QMainWindow):
             self.clear_button,
             self.page_props_button,
             self.inspect_button,
+            self.repair_button,
             self.start_button,
             self.mode_combo,
             self.page_entry,
@@ -634,6 +650,46 @@ class MainWindow(QMainWindow):
                 self.events.put(("page_props_failure", item_id, path, f"发生未预期错误：{error}"))
         self.events.put(("page_props_done",))
 
+    def _start_structure_repair(self) -> None:
+        """启动 PDF 结构修复；签章检查由服务层强制执行。"""
+        if self.processing:
+            return
+        if not self.file_items:
+            QMessageBox.warning(self, "没有文件", "请先添加至少一个 PDF 文件。")
+            return
+
+        output_text = self.output_entry.text().strip()
+        output_directory = Path(output_text) if output_text else None
+        tasks = list(self.file_items.items())
+        self.processing = True
+        self.repair_results.clear()
+        self.repair_failures.clear()
+        self._set_controls_enabled(False)
+        self._start_busy()
+        self._set_status(f"正在检查签章并修复 PDF 结构 0/{len(tasks)}……")
+        threading.Thread(
+            target=self._structure_repair_worker,
+            args=(tasks, output_directory),
+            daemon=True,
+        ).start()
+
+    def _structure_repair_worker(
+        self,
+        tasks: list[tuple[str, Path]],
+        output_directory: Path | None,
+    ) -> None:
+        for index, (item_id, path) in enumerate(tasks, start=1):
+            self.events.put(("repair_status", item_id, index, len(tasks)))
+            try:
+                result = self.service.repair_structure(path, output_dir=output_directory)
+                self.events.put(("repair_success", item_id, path, result))
+            except AdjustPdfError as error:
+                self.events.put(("repair_failure", item_id, path, str(error)))
+            except Exception as error:
+                self.logger.exception("修复 PDF 结构时发生未预期错误：%s", path)
+                self.events.put(("repair_failure", item_id, path, f"发生未预期错误：{error}"))
+        self.events.put(("repair_done",))
+
     def _start_processing(self) -> None:
         if self.processing:
             return
@@ -744,6 +800,24 @@ class MainWindow(QMainWindow):
                     self._set_table_values(item_id, status="检查失败", output=error)
                 elif kind == "page_props_done":
                     self._finish_page_props()
+                elif kind == "repair_status":
+                    _, item_id, index, total = event
+                    self._set_table_values(item_id, status="签章检查/结构修复中")
+                    self._set_status(f"正在检查签章并修复 PDF 结构 {index}/{total}……")
+                elif kind == "repair_success":
+                    _, item_id, _path, result = event
+                    self.repair_results.append(result)
+                    self._set_table_values(
+                        item_id,
+                        status="结构修复成功",
+                        output=str(result.output_path),
+                    )
+                elif kind == "repair_failure":
+                    _, item_id, path, error = event
+                    self.repair_failures.append((path, error))
+                    self._set_table_values(item_id, status="结构修复失败", output=error)
+                elif kind == "repair_done":
+                    self._finish_structure_repair()
                 elif kind == "status":
                     _, item_id, status, index, total = event
                     self._set_table_values(item_id, status=status)
@@ -941,6 +1015,33 @@ class MainWindow(QMainWindow):
             + "QTextEdit{background:#f7f2e8;color:#17243a;border:1px solid #d89a4a;padding:8px;}"
         )
         dialog.exec()
+
+    def _finish_structure_repair(self) -> None:
+        self.processing = False
+        self._stop_busy()
+        self._set_controls_enabled(True)
+        success_count = len(self.repair_results)
+        failure_count = len(self.repair_failures)
+        self._set_status(f"PDF 结构修复结束：成功 {success_count} 个，失败 {failure_count} 个")
+
+        details = [
+            f"修复成功：{success_count} 个",
+            f"修复失败：{failure_count} 个",
+            "",
+            "说明：仅重建 PDF 交叉引用和对象结构，不修改页面旋转或内容流。",
+        ]
+        if self.repair_results:
+            details.append("\n输出文件：")
+            details.extend(str(result.output_path) for result in self.repair_results)
+        if self.repair_failures:
+            details.append("\n未修复文件：")
+            details.extend(f"{path.name}：{error}" for path, error in self.repair_failures)
+
+        text = "\n".join(details)
+        if failure_count:
+            QMessageBox.warning(self, "PDF 结构修复完成", text)
+        else:
+            QMessageBox.information(self, "PDF 结构修复完成", text)
 
     def _finish_processing(self) -> None:
         self.processing = False
