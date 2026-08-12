@@ -38,3 +38,4 @@ screenshot/
 # Large local PDF fixtures
 testFile/*.pdf
 !testFile/README.md
+/release/
